@@ -682,6 +682,7 @@ function onAuthChange(e) {
   if (typeof handlePlanChange === "function" && handlePlanChange(e)) return;
   if (typeof handleFoodChange === "function" && handleFoodChange(e)) return;
   if (typeof handleEngageChange === "function" && handleEngageChange(e)) return;
+  if (typeof handleRankChange === "function" && handleRankChange(e)) return;
   if (e.target.id === "avatarInput") {
     const file = e.target.files && e.target.files[0];
     if (file) resizeImage(file, 256, (dataUrl) => {

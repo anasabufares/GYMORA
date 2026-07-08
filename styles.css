@@ -665,6 +665,19 @@ h1, .hero h1, .acct-body h3 { letter-spacing: -.02em; font-weight: 900; }
 .rl-nums { font-size: 12px; margin-top: 7px; }
 .rl-nums small { color: var(--muted); }
 
+/* rank leaderboard */
+.lb-list { display: flex; flex-direction: column; margin-top: 10px; }
+.lb-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-bottom: 1px solid var(--border); font-size: 14px;
+}
+.lb-row.me { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border-radius: 10px; border-bottom-color: transparent; }
+.lb-place { width: 26px; text-align: center; font-weight: 900; color: var(--muted); flex-shrink: 0; }
+.lb-row:nth-child(1) .lb-place, .lb-row:nth-child(2) .lb-place, .lb-row:nth-child(3) .lb-place { color: #f59e0b; }
+.lb-av { width: 30px; height: 30px; font-size: 11px; }
+.lb-name { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-score { font-weight: 900; font-variant-numeric: tabular-nums; }
+
 /* calorie tracker: amount + unit controls */
 .ct-amt { width: 92px; }
 .ct-basehint { color: var(--muted); font-size: 11px; white-space: nowrap; }
