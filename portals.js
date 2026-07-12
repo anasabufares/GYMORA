@@ -77,8 +77,8 @@ function roleLabel(r) { return { user: t("roleMember"), coach: t("roleCoach"), s
 function roleIcon(r) { return { user: "👤", coach: "🧑‍🏫", staff: "🪪", owner: "🏢", admin: "🛠️" }[r] || "👤"; }
 function isStaffRole(r) { return r === "coach" || r === "staff" || r === "owner" || r === "admin"; }
 function defaultSectionForRole(u) {
-  if (!u) return "profile";
-  return { coach: "coach", staff: "staff", owner: "owner", admin: "admin" }[u.role] || "profile";
+  if (!u) return "menu";
+  return { coach: "coach", staff: "staff", owner: "owner", admin: "admin" }[u.role] || "menu";
 }
 function ownerGym(u) { return GYMS.find(g => g.id === (u && u.gymId)) || GYMS[0]; }
 
@@ -88,13 +88,13 @@ function navForRole(u) {
   if (u.role === "coach") return [["coach", "🧑‍🏫", t("coachPortal")], ...common];
   if (u.role === "owner") return [["owner", "🏢", t("ownerDash")], ...common];
   if (u.role === "staff") return [["staff", "🪪", t("staffDash")], ...common];
-  // regular member — full app
+  // regular member — side menu (nutrition/supplements/rank live on the
+  // home-screen category circles; email moved inside Security)
   return [
     ["profile", "👤", t("myProfile")], ["plan", "🎯", t("myPlan")],
-    ["nutrition", "📷", t("calorieTracker")], ["progress", "📈", t("myProgress")],
-    ["rank", "🏆", t("rankTitle")],
+    ["workouts", "📋", t("workouts")], ["progress", "📈", t("myProgress")],
     ["points", "🏅", t("pointsRewards")], ["inbody", "🧬", t("inbodyScan")],
-    ["security", "🔒", t("security")], ["email", "✉️", t("changeEmail")],
+    ["security", "🔒", t("security")],
     ["privacy", "🛡️", t("privacy")], ["notifications", "🔔", t("notifications")],
     ["preferences", "⚙️", t("preferences")], ["danger", "⚠️", t("dangerZone")],
   ];

@@ -461,9 +461,12 @@ function handleFoodChange(e) {
   return false;
 }
 
-/* ---------- live food search (input event, focus-preserving) ---------- */
+/* ---------- live food search (input event, focus-preserving) ----------
+   Attached to both hosts that can render the tracker: the account
+   drawer (#authModal) and the home-screen page (#featureView). */
 document.addEventListener("DOMContentLoaded", () => {
-  const modal = document.getElementById("authModal");
+  ["authModal", "featureView"].forEach(id => {
+  const modal = document.getElementById(id);
   if (!modal) return;
   modal.addEventListener("input", (e) => {
     if (e.target && e.target.id === "ctSearch") {
@@ -479,5 +482,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (kcalEl) kcalEl.textContent = s.kcal;
       if (macEl) macEl.textContent = `${t("protein")} ${s.p}g · ${t("carbs")} ${s.c}g · ${t("fat")} ${s.f}g`;
     }
+  });
   });
 });

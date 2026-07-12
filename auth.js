@@ -172,7 +172,7 @@ function renderAuthButton() {
 function openAuth(view) {
   if (view === "account" && !currentUser()) view = "signin";
   authView = view;
-  if (view === "account") acctSection = (typeof defaultSectionForRole === "function" ? defaultSectionForRole(currentUser()) : "profile");
+  if (view === "account") { acctSection = (typeof defaultSectionForRole === "function" ? defaultSectionForRole(currentUser()) : "menu"); secSub = "hub"; }
   if (typeof resetPlanEditing === "function") resetPlanEditing();
   if (typeof resetNutrition === "function") resetNutrition();
   document.getElementById("authBack").classList.add("open");
@@ -189,7 +189,7 @@ function requireAuth() {
 }
 function renderAuthView() {
   const modal = document.getElementById("authModal");
-  if (authView === "account") { modal.className = "auth-modal wide"; modal.innerHTML = accountHTML(); }
+  if (authView === "account") { modal.className = "auth-modal drawer"; modal.innerHTML = accountHTML(); }
   else if (authView === "verify") { modal.className = "auth-modal"; modal.innerHTML = verifyHTML(); }
   else { modal.className = "auth-modal"; modal.innerHTML = authView === "signup" ? signupHTML() : signinHTML(); }
 }
@@ -248,39 +248,42 @@ function signupHTML() {
   <div class="note">${t("demoNote")}</div>`;
 }
 
-/* ---------- account shell ---------- */
+/* ---------- account shell: side-menu drawer, two levels ----------
+   Level 1 = the menu (avatar + item list). Level 2 = one section with
+   a back chip. Feature pages on the main screen (nutrition/rank/shop)
+   reuse the same sections via #featureBody. */
 function accountHTML() {
   const u = currentUser();
-  const nav = (typeof navForRole === "function") ? navForRole(u) : [
-    ["profile", "👤", t("myProfile")], ["plan", "🎯", t("myPlan")],
-    ["nutrition", "📷", t("calorieTracker")], ["progress", "📈", t("myProgress")],
-    ["security", "🔒", t("security")], ["email", "✉️", t("changeEmail")],
-    ["privacy", "🛡️", t("privacy")], ["notifications", "🔔", t("notifications")],
-    ["preferences", "⚙️", t("preferences")], ["danger", "⚠️", t("dangerZone")],
-  ];
-  return `
-  <div class="acct">
-    <div class="acct-side">
-      <button class="auth-x" id="authX">✕</button>
-      <div class="acct-profilecard">
-        <div class="avatar-lg">${avatarInner(u)}</div>
-        <div class="acct-name">${esc(u.name)}</div>
-        <div class="acct-email">${esc(u.email)}</div>
-      </div>
-      <nav class="acct-nav">
-        ${nav.map(([k, ic, l]) => `<button data-sec="${k}" class="${acctSection === k ? "active" : ""}">${ic} ${l}</button>`).join("")}
-        <button id="signOutBtn" style="color:#ef4444">↩ ${t("signOut")}</button>
-      </nav>
+  const nav = navForRole(u);
+  if (acctSection === "menu") {
+    return `
+    <button class="auth-x" id="authX">✕</button>
+    <div class="menu-head">
+      <div class="avatar-lg">${avatarInner(u)}</div>
+      <div class="mh-txt"><div class="acct-name">${esc(u.name)}</div><div class="acct-email">${esc(u.email)}</div></div>
     </div>
-    <div class="acct-body" id="acctBody">${sectionHTML(acctSection)}</div>
-  </div>`;
+    <nav class="menu-list">
+      ${nav.map(([k, ic, l]) => `<button class="menu-item" data-sec="${k}"><span class="mi-ic">${ic}</span><span class="mi-l">${l}</span><span class="mi-arrow">›</span></button>`).join("")}
+      <button class="menu-item mi-signout" id="signOutBtn"><span class="mi-ic">↩</span><span class="mi-l">${t("signOut")}</span></button>
+    </nav>`;
+  }
+  const item = nav.find(x => x[0] === acctSection);
+  return `
+  <button class="auth-x" id="authX">✕</button>
+  <div class="sec-head"><button class="backchip" id="acctBack">‹</button><b>${item ? item[2] : ""}</b></div>
+  <div class="acct-body" id="acctBody">${sectionHTML(acctSection)}</div>`;
 }
 function switchSection(sec) {
   acctSection = sec;
-  document.getElementById("acctBody").innerHTML = sectionHTML(sec);
-  document.querySelectorAll(".acct-nav [data-sec]").forEach(b => b.classList.toggle("active", b.dataset.sec === sec));
+  if (sec === "security") secSub = "hub";
+  renderAuthView();
 }
-function reRenderSection() { document.getElementById("acctBody").innerHTML = sectionHTML(acctSection); }
+function reRenderSection() {
+  const fb = document.getElementById("featureBody");
+  if (fb && typeof featureSection !== "undefined" && featureSection) { fb.innerHTML = sectionHTML(featureSection); return; }
+  const el = document.getElementById("acctBody");
+  if (el) el.innerHTML = sectionHTML(acctSection);
+}
 
 /* ---------- sections ---------- */
 function sectionHTML(sec) {
@@ -293,6 +296,8 @@ function sectionHTML(sec) {
   if (sec === "plan" && typeof secPlan === "function") return secPlan(u);
   if (sec === "nutrition" && typeof secNutrition === "function") return secNutrition(u);
   if (sec === "rank" && typeof secRank === "function") return secRank(u);
+  if (sec === "workouts" && typeof secWorkouts === "function") return secWorkouts(u);
+  if (sec === "supps" && typeof secSupps === "function") return secSupps(u);
   if (sec === "points" && typeof secPoints === "function") return secPoints(u);
   if (sec === "inbody" && typeof secInbody === "function") return secInbody(u);
   if (sec === "progress") return secProgress(u);
@@ -397,31 +402,46 @@ function delWeight(dateStr) {
   updateUser({ weights }); reRenderSection();
 }
 
+/* ---------- security settings: hub + sub-pages ---------- */
+let secSub = "hub";
+function secSubBack() { return `<button class="linkbtn" data-secsub="hub" style="display:inline-block;margin:0 0 12px">‹ ${t("security")}</button>`; }
+function secHubRow(ic, label, value, sub) {
+  return `<button class="menu-item" data-secsub="${sub}">
+    <span class="mi-ic">${ic}</span>
+    <span class="mi-l">${label}<span class="sec-val">${value}</span></span>
+    <span class="mi-arrow">›</span>
+  </button>`;
+}
+function statusPill(on) { return on ? `<span class="pill on">${t("enabled")}</span>` : `<span class="pill off">${t("disabled")}</span>`; }
 function secSecurity(u) {
-  const twoFA = u.twoFA;
-  return `
-  <h3>${t("security")}</h3>
-  <div class="h-sub">${t("changePassword")}</div>
-  <div class="form-row"><label>${t("currentPassword")}</label><input id="curPw" type="password"></div>
-  <div class="form-two">
-    <div class="form-row"><label>${t("newPassword")}</label><input id="newPw" type="password"></div>
-    <div class="form-row"><label>${t("confirmPassword")}</label><input id="confPw" type="password"></div>
-  </div>
-  <button class="btn" id="savePw">${t("changePassword")}</button>
-
-  <div class="set-row" style="margin-top:22px">
-    <div class="txt"><div class="t">${t("twoFA")} ${twoFA ? `<span class="pill on">${t("enabled")}</span>` : `<span class="pill off">${t("disabled")}</span>`}</div>
-      <div class="d">${t("twoFADesc")}</div></div>
-  </div>
-  <div id="twoFABlock">${twoFA ? twoFAEnabledHTML(u) : `<button class="btn ghost" id="enable2fa">${t("enable")}</button>`}</div>
-
-  <div class="set-row" style="margin-top:18px">
-    <div class="txt"><div class="t">🙂 ${t("faceId")} ${u.bioId ? `<span class="pill on">${t("enabled")}</span>` : `<span class="pill off">${t("disabled")}</span>`}</div>
-      <div class="d">${t("faceIdDesc")}</div></div>
+  if (secSub === "email") return secSubBack() + secEmail(u);
+  if (secSub === "password") return `${secSubBack()}
+    <h3>${t("changePassword")}</h3>
+    <div class="h-sub">&nbsp;</div>
+    <div class="form-row"><label>${t("currentPassword")}</label><input id="curPw" type="password"></div>
+    <div class="form-two">
+      <div class="form-row"><label>${t("newPassword")}</label><input id="newPw" type="password"></div>
+      <div class="form-row"><label>${t("confirmPassword")}</label><input id="confPw" type="password"></div>
+    </div>
+    <button class="btn" id="savePw">${t("changePassword")}</button>`;
+  if (secSub === "twofa") return `${secSubBack()}
+    <h3>${t("twoFA")} ${statusPill(u.twoFA)}</h3>
+    <div class="h-sub">${t("twoFADesc")}</div>
+    <div id="twoFABlock">${u.twoFA ? twoFAEnabledHTML(u) : `<button class="btn" id="enable2fa">${t("enable")}</button>`}</div>`;
+  if (secSub === "bio") return `${secSubBack()}
+    <h3>🙂 ${t("faceId")} ${statusPill(!!u.bioId)}</h3>
+    <div class="h-sub">${t("faceIdDesc")}</div>
     ${u.bioId
       ? `<button class="btn ghost" id="removeBio">${t("faceIdRemove")}</button>`
-      : `<button class="btn ghost" id="setupBio">${t("faceIdSetup")}</button>`}
-  </div>`;
+      : `<button class="btn" id="setupBio">${t("faceIdSetup")}</button>`}`;
+  // hub
+  return `
+  <nav class="menu-list sec-hub">
+    ${secHubRow("✉️", t("email"), esc(u.email), "email")}
+    ${secHubRow("🔑", t("password"), "••••••••", "password")}
+    ${secHubRow("🛡️", t("twoFA"), u.twoFA ? t("enabled") : t("disabled"), "twofa")}
+    ${secHubRow("🙂", t("faceId"), u.bioId ? t("enabled") : t("disabled"), "bio")}
+  </nav>`;
 }
 function twoFAEnabledHTML(u) {
   return `
@@ -648,6 +668,11 @@ function onAuthClick(e) {
   if (typeof handlePortalClick === "function" && handlePortalClick(e)) return;
   if (typeof handleEngageClick === "function" && handleEngageClick(e)) return;
   if (typeof handleRankClick === "function" && handleRankClick(e)) return;
+  if (typeof handleWorkoutClick === "function" && handleWorkoutClick(e)) return;
+  if (typeof handleShopClick === "function" && handleShopClick(e)) return;
+  if (hit("#acctBack")) { acctSection = "menu"; renderAuthView(); return; }
+  const ssb = hit("[data-secsub]");
+  if (ssb) { secSub = ssb.dataset.secsub; reRenderSection(); return; }
   if (hit("#doVerify")) return doVerify();
   if (hit("#resendCode")) return resendCode();
   if (hit("#authX")) return closeAuth();

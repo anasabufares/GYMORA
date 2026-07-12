@@ -2,6 +2,10 @@
    FitJo — app logic (vanilla JS, runs directly from file://)
    ============================================================= */
 
+/* home-screen category labels */
+Object.assign(I18N.en, { catGyms: "GYMs", catNutrition: "Nutrition", catSupps: "Supplements", catRank: "Rank" });
+Object.assign(I18N.ar, { catGyms: "الأندية", catNutrition: "التغذية", catSupps: "المكملات", catRank: "التصنيف" });
+
 const state = {
   lang: localStorage.getItem("fj_lang") || "en",
   theme: localStorage.getItem("fj_theme") || "light",
@@ -377,15 +381,55 @@ function renderDetail(g) {
 function showList() {
   state.view = "list";
   state.currentGym = null;
+  featureSection = null;
+  const fv = $("#featureView");
+  if (fv) { fv.style.display = "none"; fv.innerHTML = ""; }
   $("#detailView").style.display = "none";
   $("#listWrap").style.display = "block";
+  renderCats();
 }
 function openGym(id) {
   const g = GYMS.find(x => x.id === id);
   if (!g) return;
+  featureSection = null;
+  const fv = $("#featureView");
+  if (fv) { fv.style.display = "none"; fv.innerHTML = ""; }
+  renderCats();
   state.view = "detail";
   state.currentGym = g;
   renderDetail(g);
+}
+
+/* ---------- category circles + full-page feature views ---------- */
+let featureSection = null;
+function renderCats() {
+  const el = $("#catStrip"); if (!el) return;
+  const cats = [
+    ["gyms", "🏋️", t("catGyms")],
+    ["nutrition", "🍎", t("catNutrition")],
+    ["supps", "💊", t("catSupps")],
+    ["rank", "🏆", t("catRank")],
+  ];
+  const active = featureSection || "gyms";
+  el.innerHTML = cats.map(([k, ic, l]) => `
+    <button class="cat ${active === k ? "on" : ""}" data-cat="${k}">
+      <span class="cat-circle">${ic}</span><span class="cat-l">${l}</span>
+    </button>`).join("");
+}
+function openFeature(sec) {
+  if (typeof currentUser === "function" && !currentUser()) {
+    toast(t("memberOnlyView"));
+    if (typeof openAuth === "function") openAuth("signin");
+    return;
+  }
+  featureSection = sec;
+  $("#listWrap").style.display = "none";
+  $("#detailView").style.display = "none";
+  const fv = $("#featureView");
+  fv.innerHTML = `<div class="panel feature-panel" id="featureBody">${sectionHTML(sec)}</div>`;
+  fv.style.display = "block";
+  renderCats();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 /* ---------- Favorites ---------- */
@@ -463,6 +507,10 @@ function renderAll() {
   renderFilters();
   renderResults();
   renderCompareTray();
+  renderCats();
+  // keep an open feature page in sync (e.g. after a language switch)
+  const fb = document.getElementById("featureBody");
+  if (fb && featureSection && typeof sectionHTML === "function") fb.innerHTML = sectionHTML(featureSection);
   if (typeof renderAuthButton === "function") renderAuthButton();
 }
 
@@ -508,6 +556,13 @@ function bind() {
     return true;
   };
   document.body.addEventListener("click", (e) => {
+    const cat = e.target.closest("[data-cat]");
+    if (cat) {
+      const k = cat.dataset.cat;
+      if (k === "gyms") showList();
+      else openFeature(k);
+      return;
+    }
     const favBtn = e.target.closest("[data-fav]");
     if (favBtn) { e.stopPropagation(); toggleFav(favBtn.dataset.fav); return; }
     const cmpBtn = e.target.closest("[data-cmp]");
@@ -550,4 +605,13 @@ function openPayModal() {
 function closePayModal() { $("#modalBack").classList.remove("open"); }
 
 /* ---------- Boot ---------- */
-document.addEventListener("DOMContentLoaded", () => { bind(); renderAll(); });
+document.addEventListener("DOMContentLoaded", () => {
+  bind();
+  // feature pages reuse the account-section click/change handlers
+  const fv = $("#featureView");
+  if (fv) {
+    fv.addEventListener("click", (e) => { if (typeof onAuthClick === "function") onAuthClick(e); });
+    fv.addEventListener("change", (e) => { if (typeof onAuthChange === "function") onAuthChange(e); });
+  }
+  renderAll();
+});

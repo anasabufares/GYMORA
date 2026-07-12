@@ -665,6 +665,66 @@ h1, .hero h1, .acct-body h3 { letter-spacing: -.02em; font-weight: 900; }
 .rl-nums { font-size: 12px; margin-top: 7px; }
 .rl-nums small { color: var(--muted); }
 
+/* ---------- home category circles ---------- */
+.cats { display: flex; gap: 6px; justify-content: space-around; padding: 18px 4px 2px; }
+.cat { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 7px; color: var(--text); padding: 4px; }
+.cat-circle {
+  width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 26px; background: var(--surface); border: 2px solid var(--border);
+  box-shadow: var(--shadow); transition: transform .15s, border-color .15s, box-shadow .15s;
+}
+.cat:hover .cat-circle { transform: translateY(-2px); border-color: var(--accent); }
+.cat.on .cat-circle { background: var(--accent-grad); border-color: transparent; box-shadow: var(--accent-glow); }
+.cat-l { font-size: 12px; font-weight: 800; }
+.cat.on .cat-l { color: var(--accent); }
+@media (min-width: 700px) { .cats { justify-content: center; gap: 44px; } .cat-circle { width: 72px; height: 72px; font-size: 30px; } }
+
+/* feature pages (nutrition / supplements / rank on the main screen) */
+.feature-panel { padding: 20px; margin-bottom: 40px; }
+
+/* ---------- account side-menu drawer ---------- */
+.auth-modal.drawer {
+  position: fixed; top: 0; inset-inline-end: 0; height: 100dvh;
+  width: min(440px, 100vw); max-width: none; margin: 0; border-radius: 0;
+  overflow-y: auto; animation: drawerIn .22s ease;
+  padding: 0;
+}
+@keyframes drawerIn { from { transform: translateX(100%); opacity: .6; } to { transform: none; opacity: 1; } }
+[dir="rtl"] .auth-modal.drawer { animation-name: drawerInRtl; }
+@keyframes drawerInRtl { from { transform: translateX(-100%); opacity: .6; } to { transform: none; opacity: 1; } }
+.menu-head { display: flex; align-items: center; gap: 14px; padding: 22px 20px 10px; }
+.menu-head .avatar-lg { flex-shrink: 0; }
+.mh-txt { min-width: 0; }
+.mh-txt .acct-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menu-list { display: flex; flex-direction: column; padding: 6px 14px 26px; }
+.menu-item {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 14px 8px; background: none; border: none; border-bottom: 1px solid var(--border);
+  color: var(--text); font-size: 14px; font-weight: 700; text-align: start; cursor: pointer;
+}
+.menu-item:hover { color: var(--accent); }
+.mi-ic { width: 26px; text-align: center; font-size: 17px; flex-shrink: 0; }
+.mi-l { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; overflow: hidden; }
+.mi-arrow { color: var(--muted); font-size: 20px; line-height: 1; }
+.mi-signout { color: #ef4444; }
+.mi-signout:hover { color: #ef4444; }
+/* faded values on security rows (email / password / statuses) */
+.sec-val { color: var(--muted); opacity: .5; font-weight: 600; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sec-hub { padding: 0; }
+.sec-head { display: flex; align-items: center; gap: 10px; padding: 18px 20px 4px; font-size: 16px; }
+.backchip {
+  width: 36px; height: 36px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text); font-size: 22px; line-height: 1; flex-shrink: 0;
+}
+.backchip:hover { border-color: var(--accent); color: var(--accent); }
+.auth-modal.drawer .acct-body { padding: 16px 20px 30px; }
+
+/* workout tracker inputs */
+.ws-addset { display: flex; gap: 8px; margin-top: 10px; }
+.ws-addset .control { flex: 1; min-width: 0; }
+.ws-addex { display: flex; gap: 8px; margin-top: 12px; }
+.ws-addex select { flex: 1; min-width: 0; padding: 9px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); }
+
 /* rank leaderboard */
 .lb-list { display: flex; flex-direction: column; margin-top: 10px; }
 .lb-row {
