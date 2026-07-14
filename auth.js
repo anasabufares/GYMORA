@@ -759,7 +759,7 @@ document.addEventListener("DOMContentLoaded", () => {
 /* ---------- deep links: /admin, /coach, /owner, /staff ---------- */
 document.addEventListener("DOMContentLoaded", () => {
   const seg = location.pathname.replace(/\/+$/, "").split("/").pop().toLowerCase();
-  if (!["admin", "coach", "owner", "staff"].includes(seg)) return;
+  if (!["coach", "owner", "staff"].includes(seg)) return;
   const u = currentUser();
   if (u) {
     openAuth("account"); // lands on the signed-in user's own portal

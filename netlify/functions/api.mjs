@@ -99,6 +99,51 @@ export default async (req) => {
     return json(200, { token: signToken(email), profile: record.profile });
   }
 
+  /* ---- admin: list & manage all users (requires admin Bearer token) ---- */
+  if (path === "/admin/users") {
+    const auth = req.headers.get("authorization") || "";
+    const email = auth.startsWith("Bearer ") ? verifyToken(auth.slice(7)) : null;
+    if (!email) return json(401, { error: "Not signed in" });
+    const me = await users.get(email, { type: "json" });
+    if (!me || !me.profile || me.profile.role !== "admin") return json(403, { error: "Admin only" });
+
+    if (req.method === "GET") {
+      const out = [];
+      const { blobs } = await users.list();
+      for (const b of blobs) {
+        const rec = await users.get(b.key, { type: "json" });
+        if (!rec) continue;
+        const p = rec.profile || {};
+        out.push({
+          email: rec.email, name: p.name || "", role: p.role || "user",
+          points: p.points || 0, checkins: (p.checkinDates || []).length,
+          checkinDates: p.checkinDates || [],
+          banned: !!p.banned, createdAt: rec.createdAt || null,
+        });
+      }
+      return json(200, { users: out });
+    }
+
+    if (req.method === "PUT") {
+      let body; try { body = await req.json(); } catch { return json(400, { error: "Invalid JSON" }); }
+      const target = String(body.email || "").trim().toLowerCase();
+      const rec = await users.get(target, { type: "json" });
+      if (!rec) return json(404, { error: "User not found" });
+      if (target === email && body.banned) return json(400, { error: "You can't ban yourself" });
+      rec.profile = { ...(rec.profile || {}), banned: !!body.banned };
+      await users.setJSON(target, rec);
+      return json(200, { ok: true });
+    }
+
+    if (req.method === "DELETE") {
+      let body; try { body = await req.json(); } catch { return json(400, { error: "Invalid JSON" }); }
+      const target = String(body.email || "").trim().toLowerCase();
+      if (target === email) return json(400, { error: "You can't delete yourself" });
+      await users.delete(target);
+      return json(200, { ok: true });
+    }
+  }
+
   /* ---- profile (requires Bearer token) ---- */
   if (path === "/profile") {
     const auth = req.headers.get("authorization") || "";
