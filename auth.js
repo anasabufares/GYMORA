@@ -585,6 +585,8 @@ function afterAuth() {
     openAuth("account"); // lands on the role's portal (see openAuth default section)
   } else {
     closeAuth();
+    // member without a plan yet -> continue the onboarding questions
+    if (u && typeof onboardingMaybeResume === "function") onboardingMaybeResume(u);
   }
   if (u) toast(`${t("hi")}, ${u.name.split(" ")[0]} 👋`);
 }

@@ -1070,3 +1070,53 @@ h1, .hero h1, .acct-body h3 { letter-spacing: -.02em; font-weight: 900; }
    theme, or phones render them light-on-light / dark-on-dark. */
 :root, body { color-scheme: light; }
 [data-theme="dark"], [data-theme="dark"] body { color-scheme: dark; }
+
+/* ---------- Onboarding wizard (one question at a time) ---------- */
+.ob-back {
+  position: fixed; inset: 0; z-index: 80; display: none;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 14%, var(--bg)), var(--bg) 55%);
+  overflow-y: auto; padding: 20px;
+}
+.ob-back.open { display: flex; align-items: center; justify-content: center; }
+.ob-card {
+  width: 100%; max-width: 480px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 22px;
+  padding: 22px 22px 26px; box-shadow: var(--shadow);
+  animation: obIn .3s ease both;
+}
+@keyframes obIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.ob-top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.ob-nav {
+  width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text); font-size: 16px; font-weight: 700;
+  display: grid; place-items: center; cursor: pointer; flex: none;
+}
+.ob-progress { flex: 1; height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.ob-progress span { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width .3s; }
+.ob-steplabel { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.ob-q { font-size: 24px; line-height: 1.25; margin: 8px 0 4px; }
+.ob-sub { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+.ob-opts { display: grid; gap: 10px; margin: 14px 0 6px; }
+.ob-opts.two { grid-template-columns: 1fr 1fr; }
+.ob-opt {
+  padding: 14px 12px; border-radius: 16px; border: 2px solid var(--border);
+  background: var(--surface-2); color: var(--text); font-weight: 700; font-size: 14px;
+  text-align: center; cursor: pointer; transition: border-color .15s, background .15s, transform .12s;
+}
+.ob-opt:hover { border-color: var(--accent); }
+.ob-opt:active { transform: scale(.97); }
+.ob-opt.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--surface-2)); }
+.ob-opt .ob-ico { display: block; font-size: 30px; margin-bottom: 6px; }
+.ob-inwrap { position: relative; margin: 12px 0; }
+.ob-input {
+  width: 100%; padding: 14px 16px; font-size: 18px; font-weight: 700; text-align: center;
+  border: 2px solid var(--border); border-radius: 16px;
+  background: var(--surface-2); color: var(--text); outline: none;
+}
+.ob-input:focus { border-color: var(--accent); }
+.ob-unit {
+  position: absolute; inset-inline-end: 16px; top: 50%; transform: translateY(-50%);
+  color: var(--muted); font-weight: 700; font-size: 14px; pointer-events: none;
+}
+.auth-link.block-center { display: block; margin: 12px auto 0; text-align: center; }
+.ob-center .ob-opt { text-align: center; }

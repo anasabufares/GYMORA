@@ -57,7 +57,7 @@ function wtSuggestion(u) {
       return { name: WK[day.workout].name[state.lang], ex: WK[day.workout].ex.map(x => x.n[state.lang]) };
     }
     if (typeof splitFor === "function" && typeof WK !== "undefined") {
-      const key = splitFor(u.goal || "fit", 3)[0];
+      const key = splitFor(u.goal || "fit", 3, u.gender)[0];
       return { name: WK[key].name[state.lang], ex: WK[key].ex.map(x => x.n[state.lang]) };
     }
   } catch (e) { /* plan module absent */ }

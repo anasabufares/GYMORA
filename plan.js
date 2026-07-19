@@ -99,6 +99,18 @@ const WK = {
     { n: { en: "Deadlift", ar: "رفعة ميتة" }, s: 3 }, { n: { en: "Incline press", ar: "ضغط مائل" }, s: 3 },
     { n: { en: "Lat pulldown", ar: "سحب أمامي" }, s: 3 }, { n: { en: "Leg press", ar: "دفع أرجل" }, s: 3 },
     { n: { en: "Hanging leg raises", ar: "رفع أرجل معلق" }, s: 3 } ] },
+  glutes: { name: { en: "Glutes & Hamstrings", ar: "مؤخرة وأوتار الركبة" }, ex: [
+    { n: { en: "Hip thrusts", ar: "دفع الورك (هيب ثراست)" }, s: 4 }, { n: { en: "Romanian deadlift", ar: "رفعة رومانية" }, s: 3 },
+    { n: { en: "Bulgarian split squats", ar: "سكوات بلغاري" }, s: 3 }, { n: { en: "Cable kickbacks", ar: "ركلات كيبل خلفية" }, s: 3 },
+    { n: { en: "Hamstring curls", ar: "ثني أرجل" }, s: 3 } ] },
+  upperTone: { name: { en: "Upper body — Tone & Strength", ar: "الجزء العلوي — شد وقوة" }, ex: [
+    { n: { en: "Lat pulldown", ar: "سحب أمامي" }, s: 3 }, { n: { en: "Seated cable row", ar: "تجديف جالس" }, s: 3 },
+    { n: { en: "Dumbbell shoulder press", ar: "ضغط أكتاف دمبل" }, s: 3 }, { n: { en: "Chest press machine", ar: "جهاز ضغط صدر" }, s: 3 },
+    { n: { en: "Biceps + triceps superset", ar: "سوبر ست بايسبس وترايسبس" }, s: 3 } ] },
+  legsSculpt: { name: { en: "Legs — Quads & Calves", ar: "أرجل — أمامية وسمانة" }, ex: [
+    { n: { en: "Goblet squats", ar: "سكوات جوبلت" }, s: 4 }, { n: { en: "Leg press", ar: "دفع أرجل" }, s: 3 },
+    { n: { en: "Walking lunges", ar: "طعنات مشي" }, s: 3 }, { n: { en: "Leg extension", ar: "تمديد أرجل" }, s: 3 },
+    { n: { en: "Calf raises", ar: "رفع سمانة" }, s: 3 } ] },
   cardio: { name: { en: "Cardio & Core", ar: "كارديو وبطن" }, ex: [
     { n: { en: "Incline treadmill walk", ar: "مشي مائل على الجهاز" }, s: 1, rep: "25–30 min" },
     { n: { en: "HIIT intervals", ar: "فترات هيت" }, s: 1, rep: "10 min" },
@@ -146,8 +158,16 @@ function calcPlan(u) {
   return { bmr: Math.round(bmr), tdee: Math.round(tdee), cals, protein, carbs, fat, waterL: Math.round(waterMl / 100) / 10, cups: Math.round(waterMl / 250) };
 }
 function repScheme(goal) { return { lose: "12–15", fit: "12–15", recomp: "10–12", build: "8–12", gain: "6–10" }[goal] || "10–12"; }
-function splitFor(goal, days) {
+function splitFor(goal, days, gender) {
   const strength = (goal === "build" || goal === "gain" || goal === "recomp");
+  if (gender === "f") {
+    // women's split: glutes & lower-body emphasis
+    if (days <= 2) return ["glutes", "upperTone"].slice(0, days);
+    if (days === 3) return strength ? ["glutes", "upperTone", "legsSculpt"] : ["glutes", "cardio", "upperTone"];
+    if (days === 4) return strength ? ["glutes", "upperTone", "legsSculpt", "glutes"] : ["glutes", "upperTone", "cardio", "legsSculpt"];
+    if (days === 5) return strength ? ["glutes", "upperTone", "legsSculpt", "glutes", "upperTone"] : ["glutes", "upperTone", "cardio", "legsSculpt", "glutes"];
+    return ["glutes", "upperTone", "legsSculpt", "cardio", "glutes", "upperTone"];
+  }
   if (days <= 2) return ["fullA", "fullB"].slice(0, days);
   if (days === 3) return strength ? ["push", "pull", "legs"] : ["fullA", "cardio", "fullB"];
   if (days === 4) return strength ? ["upper", "lower", "upper", "lower"] : ["fullA", "cardio", "fullB", "cardio"];
@@ -157,7 +177,7 @@ function splitFor(goal, days) {
 function buildWeek(u) {
   const inx = u.intake, days = inx.daysPerWeek;
   const train = TRAIN_INDICES[days] || TRAIN_INDICES[3];
-  const split = splitFor(inx.goal, days);
+  const split = splitFor(inx.goal, days, u.gender);
   return JDAYS.map((d, i) => {
     const ti = train.indexOf(i);
     return ti >= 0 ? { day: d, workout: split[ti] } : { day: d, rest: true };
