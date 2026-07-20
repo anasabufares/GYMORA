@@ -52,6 +52,10 @@
   }
 
   let pushTimer = null;
+  /* Profile saved before the cloud session exists (the signup request
+     is still in flight) — held here and pushed as soon as the token
+     arrives, so the first sync never loses the onboarding answers. */
+  let pendingProfile = null;
 
   window.GymoraCloud = {
     hasSession: () => !!getToken(),
@@ -59,7 +63,10 @@
     /* create the cloud account right after a local signup */
     async signup(email, password, profile) {
       const r = await call("/signup", "POST", { email, password, profile });
-      if (r && r.token) setToken(r.token);
+      if (r && r.token) {
+        setToken(r.token);
+        if (pendingProfile) { const p = pendingProfile; pendingProfile = null; this.pushSoon(p); }
+      }
       return r;
     },
 
@@ -103,7 +110,7 @@
 
     /* debounced profile upload — call freely after every local change */
     pushSoon(profile) {
-      if (!getToken()) return;
+      if (!getToken()) { pendingProfile = profile; return; }
       clearTimeout(pushTimer);
       pushTimer = setTimeout(() => call("/profile", "PUT", { profile }, true), 1500);
     },
