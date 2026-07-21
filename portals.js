@@ -128,7 +128,7 @@ function navForRole(u) {
     ["profile", "👤", t("myProfile")], ["plan", "🎯", t("myPlan")],
     ["premium", "⭐", t("pmTab")],
     ["workouts", "📋", t("workouts")], ["library", "📚", t("libTitle")],
-    ["progress", "📈", t("myProgress")],
+    ["classes", "🗓️", t("clsTab")], ["progress", "📈", t("myProgress")],
     ["points", "🏅", t("pointsRewards")], ["inbody", "🧬", t("inbodyScan")],
     ["security", "🔒", t("security")],
     ["privacy", "🛡️", t("privacy")], ["notifications", "🔔", t("notifications")],

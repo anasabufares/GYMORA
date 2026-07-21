@@ -333,6 +333,7 @@ function sectionHTML(sec) {
   if (sec === "workouts" && typeof secWorkouts === "function") return typeof gatePremium === "function" ? gatePremium(u, secWorkouts) : secWorkouts(u);
   if (sec === "library" && typeof secLibrary === "function") return secLibrary(u);
   if (sec === "premium" && typeof secPremiumTab === "function") return secPremiumTab(u);
+  if (sec === "classes" && typeof secClasses === "function") return secClasses(u);
   if (sec === "supps" && typeof secSupps === "function") return secSupps(u);
   if (sec === "points" && typeof secPoints === "function") return secPoints(u);
   if (sec === "inbody" && typeof secInbody === "function") return secInbody(u);
@@ -785,6 +786,7 @@ function onAuthClick(e) {
   const hit = (s) => e.target.closest(s);
   if (typeof handlePremiumClick === "function" && handlePremiumClick(e)) return;
   if (typeof handleLibClick === "function" && handleLibClick(e)) return;
+  if (typeof handleClassClick === "function" && handleClassClick(e)) return;
   if (typeof handlePlanClick === "function" && handlePlanClick(e)) return;
   if (typeof handleFoodClick === "function" && handleFoodClick(e)) return;
   if (typeof handlePortalClick === "function" && handlePortalClick(e)) return;

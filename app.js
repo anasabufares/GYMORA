@@ -295,7 +295,7 @@ function renderDetail(g) {
         ${CLASS_SCHEDULE.map(d => `
           <div class="sched-day">
             <div class="sched-dname">${d.day[state.lang]}</div>
-            <div class="sched-items">${d.items.map(it => `<span class="sched-item">${it.time} · ${it.name[state.lang]}</span>`).join("")}</div>
+            <div class="sched-items">${d.items.map(it => `<span class="sched-item">${it.time} · ${it.name[state.lang]}${typeof classBookBtn === "function" ? classBookBtn(g, d.day, it) : ""}</span>`).join("")}</div>
           </div>`).join("")}
       </div>
     </div>` : "";
@@ -579,6 +579,7 @@ function bind() {
       else openFeature(k);
       return;
     }
+    if (typeof handleClassBook === "function" && handleClassBook(e)) return;
     const favBtn = e.target.closest("[data-fav]");
     if (favBtn) { e.stopPropagation(); toggleFav(favBtn.dataset.fav); return; }
     const cmpBtn = e.target.closest("[data-cmp]");
