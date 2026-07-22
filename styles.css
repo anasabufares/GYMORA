@@ -122,6 +122,10 @@ img { max-width: 100%; }
 /* ---------- Layout ---------- */
 .layout { display: grid; grid-template-columns: 260px 1fr; gap: 22px; padding: 24px 0 60px; }
 @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+/* The filters only belong to the gym list — every other screen (a gym's
+   page, Exercises, Nutrition, Supplements, Rank, My Gym) gets the full width */
+.layout.solo { grid-template-columns: 1fr; }
+.layout.solo .filters { display: none; }
 
 /* ---------- Filters ---------- */
 .panel {

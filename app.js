@@ -389,6 +389,14 @@ function renderDetail(g) {
 }
 
 /* ---------- View switching ---------- */
+/* the filters sidebar exists for the gym list and nothing else */
+function syncFilters() {
+  const layout = document.querySelector(".layout");
+  if (!layout) return;
+  const onGymList = state.view === "list" && !featureSection;
+  layout.classList.toggle("solo", !onGymList);
+}
+
 function showList() {
   state.view = "list";
   state.currentGym = null;
@@ -398,6 +406,7 @@ function showList() {
   $("#detailView").style.display = "none";
   $("#listWrap").style.display = "block";
   renderCats();
+  syncFilters();
 }
 function openGym(id) {
   const g = GYMS.find(x => x.id === id);
@@ -409,6 +418,7 @@ function openGym(id) {
   state.view = "detail";
   state.currentGym = g;
   renderDetail(g);
+  syncFilters();
 }
 
 /* ---------- category circles + full-page feature views ---------- */
@@ -445,6 +455,7 @@ function openFeature(sec) {
   fv.innerHTML = `<div class="panel feature-panel" id="featureBody">${sectionHTML(sec)}</div>`;
   fv.style.display = "block";
   renderCats();
+  syncFilters();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -524,6 +535,7 @@ function renderAll() {
   renderResults();
   renderCompareTray();
   renderCats();
+  syncFilters();
   // keep an open feature page in sync (e.g. after a language switch)
   const fb = document.getElementById("featureBody");
   if (fb && featureSection && typeof sectionHTML === "function") fb.innerHTML = sectionHTML(featureSection);
