@@ -15,6 +15,7 @@ const state = {
   tab: "all",             // all | favorites
   view: "list",           // list | detail
   currentGym: null,
+  gymsLive: false,        // true once real gyms load from the backend database
   compare: [],            // gym ids selected for comparison (max 3)
   filtersOpen: (localStorage.getItem("fj_filtersOpen") ?? (window.innerWidth > 860 ? "true" : "false")) === "true",
   filters: { q: "", area: "", facilities: [], pool: "any", access: "any", minAge: 0, maxPrice: 80, sort: "rating", open247: false },
@@ -389,6 +390,19 @@ function renderDetail(g) {
 }
 
 /* ---------- View switching ---------- */
+/* Footer reflects whether the gym list is real (loaded from the
+   backend database) or the built-in samples — so "sample data" only
+   shows while the database is empty and disappears once real gyms are
+   added in the admin console. */
+function renderFooter() {
+  const el = document.getElementById("appFooter");
+  if (!el) return;
+  const ar = state.lang === "ar";
+  const place = ar ? "عمّان، الأردن" : "Amman, Jordan";
+  const sample = state.gymsLive ? "" : (ar ? " · بيانات تجريبية" : " · Sample data");
+  el.textContent = `GYMORA${sample} · ${place} 🇯🇴`;
+}
+
 /* the filters sidebar exists for the gym list and nothing else */
 function syncFilters() {
   const layout = document.querySelector(".layout");
@@ -535,6 +549,7 @@ function renderAll() {
   renderResults();
   renderCompareTray();
   renderCats();
+  renderFooter();
   syncFilters();
   // keep an open feature page in sync (e.g. after a language switch)
   const fb = document.getElementById("featureBody");
@@ -646,9 +661,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // Live gym list from the backend (managed in the admin console).
   if (window.GymoraCloud) {
     GymoraCloud.loadGyms().then((list) => {
-      if (!list) return;
+      if (!list) return;              // database empty / offline → keep the samples
       GYMS.length = 0;
       GYMS.push(...list);
+      state.gymsLive = true;          // real gyms from the database are now showing
       renderAll();
     });
   }
