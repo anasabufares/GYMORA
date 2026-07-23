@@ -271,7 +271,9 @@ function obVerifyHTML() {
   }
   const box = st.status === "demo"
     ? `<div class="verify-demo">${t("verifyDemo")} <b>${st.code}</b></div>`
-    : `<div class="ob-sub" style="text-align:center">📧 ${t("verifySentTo")}<br><b>${esc(email)}</b></div>`;
+    : st.status === "failed"
+      ? `<div class="ob-sub" style="text-align:center">⚠️ ${t("verifyEmailFailed")}</div>`
+      : `<div class="ob-sub" style="text-align:center">📧 ${t("verifySentTo")}<br><b>${esc(email)}</b><br><span style="color:var(--muted);font-size:13px">${t("verifyCheckInbox")}</span></div>`;
   return `
   <div class="ob-card ob-center">
     <h2 class="ob-q" style="text-align:center">${t("obVerifyTitle")}</h2>
@@ -389,7 +391,9 @@ async function obFinish() {
     if (GymoraCloud.hasSession()) {
       const r = await GymoraCloud.verifySend();
       if (r.ok && r.data) {
-        obVerifyState = r.data.sent ? { status: "emailed" } : { status: "demo", code: r.data.demoCode };
+        obVerifyState = r.data.sent ? { status: "emailed" }
+          : r.data.emailFailed ? { status: "failed" }
+          : { status: "demo", code: r.data.demoCode };
         obRender();
         return;
       }
@@ -415,7 +419,12 @@ function obClick(e) {
   if (hit("#obVerifyGo")) { obVerifyGo(); return; }
   if (hit("#obVerifyResend")) {
     GymoraCloud.verifySend().then(r => {
-      if (r.ok && r.data) { obVerifyState = r.data.sent ? { status: "emailed" } : { status: "demo", code: r.data.demoCode }; obRender(); toast(t("verifyResend")); }
+      if (r.ok && r.data) {
+        obVerifyState = r.data.sent ? { status: "emailed" }
+          : r.data.emailFailed ? { status: "failed" }
+          : { status: "demo", code: r.data.demoCode };
+        obRender(); toast(t("verifyResend"));
+      }
       else obErr(r.offline ? t("verifyNet") : (r.data && r.data.error) || t("verifyBad"));
     });
     return;

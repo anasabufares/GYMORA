@@ -33,6 +33,8 @@ Object.assign(I18N.en, { changePhoto: "Change photo", removePhoto: "Remove", lb:
   keyGymNote: "Your gym is set automatically by your access key.",
   signinKeyHint: "First time here? Create your account below with the access key you were given.",
   verifySentTo: "We emailed a 6-digit code to",
+  verifyCheckInbox: "Check your inbox (and the spam folder). It can take a minute to arrive.",
+  verifyEmailFailed: "We couldn't send the email right now. Please try again in a moment.",
   verifyNet: "Couldn't reach the server — check your internet and try again." });
 Object.assign(I18N.ar, { changePhoto: "تغيير الصورة", removePhoto: "إزالة", lb: "رطل",
   adminCodeLabel: "رمز وصول المشرف",
@@ -53,6 +55,8 @@ Object.assign(I18N.ar, { changePhoto: "تغيير الصورة", removePhoto: "�
   keyGymNote: "يُحدَّد ناديك تلقائياً من مفتاح الوصول.",
   signinKeyHint: "أول مرة هنا؟ أنشئ حسابك أدناه باستخدام مفتاح الوصول الذي استلمته.",
   verifySentTo: "أرسلنا رمزاً من 6 أرقام إلى",
+  verifyCheckInbox: "تفقّد بريدك (ومجلد الرسائل غير المرغوبة). قد يستغرق وصوله دقيقة.",
+  verifyEmailFailed: "تعذّر إرسال البريد الآن. حاول مرة أخرى بعد قليل.",
   verifyNet: "تعذّر الوصول إلى الخادم — تحقق من الإنترنت وحاول مجدداً." });
 
 /* ---------- biometric (Face ID / fingerprint) ----------
@@ -695,17 +699,19 @@ function handleGoogle() {
    shown on screen exactly like the old demo. */
 let pendingCode = null;   // demo code shown on screen (offline / no email service)
 let cloudVerify = false;  // true when the server holds the code
+let emailFailed = false;  // provider configured but the send failed
 function genCode() { return String(Math.floor(100000 + Math.random() * 900000)); }
 async function startVerify() {
-  pendingCode = null; cloudVerify = false;
+  pendingCode = null; cloudVerify = false; emailFailed = false;
   authView = "verify"; renderAuthView(); // show the screen immediately
   if (window.GymoraCloud && GymoraCloud.hasSession()) {
     const r = await GymoraCloud.verifySend();
     if (r.ok && r.data) {
       if (r.data.already) { updateUser({ verified: true }); toast(t("verifiedMsg")); return afterAuth(); }
       cloudVerify = true;
-      pendingCode = r.data.sent ? null : (r.data.demoCode || null);
-      if (authView === "verify") renderAuthView();
+      emailFailed = !!r.data.emailFailed;
+      pendingCode = r.data.sent || r.data.emailFailed ? null : (r.data.demoCode || null);
+      if (authView === "verify") { renderAuthView(); if (emailFailed) showErr(t("verifyEmailFailed")); }
       return;
     }
     if (!r.offline) {
@@ -726,9 +732,11 @@ function verifyHTML() {
   const u = currentUser();
   const box = pendingCode
     ? `<div class="verify-demo">${t("verifyDemo")} <b>${pendingCode}</b></div>`
-    : cloudVerify
-      ? `<div class="note" style="margin-bottom:12px">📧 ${t("verifySentTo")} <b>${esc(u ? u.email : "")}</b></div>`
-      : `<div class="note" style="margin-bottom:12px">⏳</div>`;
+    : emailFailed
+      ? `<div class="note" style="margin-bottom:12px">⚠️ ${t("verifyEmailFailed")}</div>`
+      : cloudVerify
+        ? `<div class="note" style="margin-bottom:12px">📧 ${t("verifySentTo")} <b>${esc(u ? u.email : "")}</b><br><span style="color:var(--muted)">${t("verifyCheckInbox")}</span></div>`
+        : `<div class="note" style="margin-bottom:12px">⏳</div>`;
   return `
   <button class="auth-x" id="authX">✕</button>
   <div class="auth-title">${t("verifyTitle")}</div>

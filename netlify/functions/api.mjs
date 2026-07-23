@@ -425,15 +425,22 @@ export default async (req) => {
      BREVO_API_KEY + SENDER_EMAIL are configured. Without them the code
      comes back in the response (demo mode) so the prototype still works. */
   const codeHash = (email, code) => createHash("sha256").update(email + "|" + code + "|" + SECRET).digest("hex");
+  /* Returns:
+       { configured:false }                 → no email provider set → demo mode
+       { configured:true, ok:true }          → the code was emailed
+       { configured:true, ok:false, error }  → provider set but the send failed
+     Once a provider is configured we NEVER fall back to putting the code
+     in the response — a real deployment must fix the config, not leak
+     codes on screen. */
   async function sendVerifyEmail(to, code) {
     const key = process.env.BREVO_API_KEY, sender = process.env.SENDER_EMAIL;
-    if (!key || !sender) return false;
+    if (!key || !sender) return { configured: false };
     try {
       const r = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: { "api-key": key, "Content-Type": "application/json" },
         body: JSON.stringify({
-          sender: { name: "GYMORA", email: sender },
+          sender: { name: process.env.SENDER_NAME || "GYMORA", email: sender },
           to: [{ email: to }],
           subject: `${code} — your GYMORA verification code`,
           htmlContent: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px">
@@ -446,8 +453,16 @@ export default async (req) => {
           </div>`,
         }),
       });
-      return r.ok;
-    } catch { return false; }
+      if (r.ok) return { configured: true, ok: true };
+      // Surface Brevo's own reason (unverified sender, bad key…) into the logs.
+      const detail = await r.json().catch(() => null);
+      const reason = (detail && (detail.message || detail.code)) || ("HTTP " + r.status);
+      console.error("GYMORA verify email failed:", reason);
+      return { configured: true, ok: false, error: reason };
+    } catch (e) {
+      console.error("GYMORA verify email error:", e && e.message);
+      return { configured: true, ok: false, error: "email service unreachable" };
+    }
   }
 
   if (req.method === "POST" && path === "/verify/send") {
@@ -463,8 +478,12 @@ export default async (req) => {
     const code = String(Math.floor(100000 + Math.random() * 900000));
     record.verify = { hash: codeHash(me.email, code), exp: now + 15 * 60 * 1000, attempts: 0, lastSend: now };
     await users.setJSON(me.email, record);
-    const sent = await sendVerifyEmail(me.email, code);
-    return json(200, sent ? { sent: true } : { sent: false, demoCode: code });
+    const res = await sendVerifyEmail(me.email, code);
+    if (res.ok) return json(200, { sent: true });
+    // No provider configured yet → prototype demo mode (code on screen).
+    if (!res.configured) return json(200, { sent: false, demoCode: code });
+    // Provider configured but the send failed → tell the client, don't leak the code.
+    return json(200, { sent: false, emailFailed: true });
   }
 
   if (req.method === "POST" && path === "/verify/confirm") {
