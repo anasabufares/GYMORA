@@ -579,7 +579,16 @@ function renderAll() {
 
 /* ---------- Events ---------- */
 function bind() {
-  // top bar
+  // top bar — the logo/brand is a "home" button
+  const brand = $(".brand");
+  if (brand) {
+    brand.setAttribute("role", "button");
+    brand.setAttribute("tabindex", "0");
+    brand.title = t("catGyms");
+    const goHome = () => { showList(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+    brand.onclick = goHome;
+    brand.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goHome(); } };
+  }
   $("#langToggle").onclick = () => { state.lang = state.lang === "en" ? "ar" : "en"; persist(); state.view === "detail" ? (renderAll(), renderDetail(state.currentGym)) : renderAll(); };
   $("#themeToggle").onclick = () => { state.theme = state.theme === "light" ? "dark" : "light"; persist(); applyChrome(); renderControls(); };
   $("#currencySel").onchange = (e) => { state.currency = e.target.value; persist(); state.view === "detail" ? renderDetail(state.currentGym) : renderAll(); };
