@@ -19,7 +19,7 @@ const NOTICE_I18N = {
     ntCompose: "Send an announcement", ntComposeSub: "It appears inside the app for everyone you pick.",
     ntFieldTitle: "Title", ntFieldBody: "Message", ntFieldAudience: "Who sees it", ntFieldKind: "Style",
     ntAudAll: "Everyone", ntAudMembers: "Members", ntAudStaff: "Coaches & staff", ntAudCoaches: "Coaches only", ntAudOwners: "Gym owners",
-    ntKindInfo: "ℹ️ Info", ntKindWarn: "⚠️ Important", ntKindGood: "🎉 Good news",
+    ntKindInfo: "ℹ️ Info", ntKindUpdate: "🚀 Update", ntKindWarn: "⚠️ Important", ntKindGood: "🎉 Good news",
     ntSend: "Publish announcement", ntSent: "Announcement published ✓", ntFailed: "Could not publish — try again.",
     ntNeedText: "Write a title or a message first.",
     ntMine: "Published", ntDelete: "Delete", ntDeleted: "Announcement deleted",
@@ -34,7 +34,7 @@ const NOTICE_I18N = {
     ntCompose: "إرسال إعلان", ntComposeSub: "يظهر داخل التطبيق لكل من تختارهم.",
     ntFieldTitle: "العنوان", ntFieldBody: "الرسالة", ntFieldAudience: "من يراه", ntFieldKind: "النمط",
     ntAudAll: "الجميع", ntAudMembers: "الأعضاء", ntAudStaff: "المدرّبون والموظفون", ntAudCoaches: "المدرّبون فقط", ntAudOwners: "أصحاب الأندية",
-    ntKindInfo: "ℹ️ معلومة", ntKindWarn: "⚠️ مهم", ntKindGood: "🎉 خبر سار",
+    ntKindInfo: "ℹ️ معلومة", ntKindUpdate: "🚀 تحديث", ntKindWarn: "⚠️ مهم", ntKindGood: "🎉 خبر سار",
     ntSend: "نشر الإعلان", ntSent: "تم نشر الإعلان ✓", ntFailed: "تعذّر النشر — حاول مجدداً.",
     ntNeedText: "اكتب عنواناً أو رسالة أولاً.",
     ntMine: "المنشورة", ntDelete: "حذف", ntDeleted: "حُذف الإعلان",
@@ -93,7 +93,10 @@ function renderNoticeBell() {
 }
 
 function noticeKindStyle(kind) {
-  return kind === "warn" ? { ic: "⚠️", col: "#f59e0b" } : kind === "good" ? { ic: "🎉", col: "var(--accent)" } : { ic: "📣", col: "#3b82f6" };
+  return kind === "warn" ? { ic: "⚠️", col: "#f59e0b" }
+    : kind === "good" ? { ic: "🎉", col: "var(--accent)" }
+    : kind === "update" ? { ic: "🚀", col: "#8b5cf6" }
+    : { ic: "📣", col: "#3b82f6" };
 }
 function noticeCardHTML(n) {
   const k = noticeKindStyle(n.kind);
@@ -171,8 +174,9 @@ function noticeComposeHTML(role) {
       <div class="form-row"><label>${t("ntFieldKind")}</label>
         <select id="ntKindIn">
           <option value="info">${t("ntKindInfo")}</option>
-          <option value="warn">${t("ntKindWarn")}</option>
+          <option value="update">${t("ntKindUpdate")}</option>
           <option value="good">${t("ntKindGood")}</option>
+          <option value="warn">${t("ntKindWarn")}</option>
         </select></div>
     </div>
     <button class="btn" id="ntSendBtn">${t("ntSend")}</button>

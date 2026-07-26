@@ -890,7 +890,7 @@ export default async (req) => {
         title, body: text, audience,
         // a gym owner can only speak to their own gym
         gymId: myRole === "owner" ? (me.profile.gymId || null) : (body.gymId || null),
-        kind: ["info", "warn", "good"].includes(body.kind) ? body.kind : "info",
+        kind: ["info", "warn", "good", "update"].includes(body.kind) ? body.kind : "info",
         until: body.until ? Number(body.until) : null,
         createdAt: Date.now(), active: true, by: me.email, byRole: myRole,
       };

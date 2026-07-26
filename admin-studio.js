@@ -35,7 +35,8 @@ window.AdminStudio = (function () {
      1) ANNOUNCEMENTS
      ========================================================= */
   const AUDIENCES = [["all", "Everyone"], ["members", "Members"], ["staff", "Coaches & staff"], ["coaches", "Coaches only"], ["owners", "Gym owners"]];
-  const KINDS = [["info", "ℹ️ Info"], ["warn", "⚠️ Important"], ["good", "🎉 Good news"]];
+  const KINDS = [["info", "ℹ️ Info"], ["update", "🚀 Update"], ["good", "🎉 Good news"], ["warn", "⚠️ Important"]];
+  const EMOJIS = ["📢","🚀","🎉","🔥","⭐","✅","🆕","⚠️","🎁","💪","🏋️","🏊","📅","⏰","❤️","👏","🙌","💯","🏆","🥇"];
 
   function noticesUI() {
     const gymOpts = (typeof GYMS !== "undefined" ? GYMS : []).map(g => `<option value="${g.id}">${esc(g.name.en)}</option>`).join("");
@@ -43,8 +44,11 @@ window.AdminStudio = (function () {
       <h2>Announcements</h2>
       <div class="note" style="padding:0 0 12px">Write a message that appears inside the app — a bell in the top bar, a slide-down banner the first time it is seen, and a permanent list in the account menu.</div>
       <div class="ann-form">
-        <div class="f"><label>Title</label><input id="anTitle" placeholder="New classes this week" /></div>
-        <div class="f" style="grid-column:1/-1"><label>Message</label><textarea id="anBody" rows="3" placeholder="Write what you want your users to see…"></textarea></div>
+        <div class="f"><label>Title</label><input id="anTitle" placeholder="🚀 New update is live!" /></div>
+        <div class="f" style="grid-column:1/-1"><label>Message</label>
+          <textarea id="anBody" rows="3" placeholder="Tell everyone what's new… tap an emoji below to add it 🎉"></textarea>
+          <div class="emoji-bar" id="anEmojis">${EMOJIS.map(e => `<button type="button" class="emoji-btn" data-emoji="${e}" tabindex="-1">${e}</button>`).join("")}</div>
+        </div>
         <div class="f"><label>Who sees it</label><select id="anAud">${AUDIENCES.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></div>
         <div class="f"><label>Style</label><select id="anKind">${KINDS.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></div>
         <div class="f"><label>Limit to one gym (optional)</label><select id="anGym"><option value="">All gyms</option>${gymOpts}</select></div>
@@ -68,6 +72,20 @@ window.AdminStudio = (function () {
           <td>${new Date(n.createdAt).toLocaleDateString("en-US", { day: "numeric", month: "short" })}</td>
           <td><button class="act danger" data-andel="${esc(n.id)}">Delete</button></td>
         </tr>`).join("") : `<tr><td colspan="5" class="note">No announcements yet.</td></tr>`);
+  }
+
+  /* drop an emoji into whichever field the cursor is in (message by default) */
+  let lastFocusedField = "anBody";
+  function insertEmoji(ch) {
+    const a = document.activeElement;
+    const ta = (a && (a.id === "anTitle" || a.id === "anBody")) ? a
+      : (document.getElementById(lastFocusedField) || document.getElementById("anBody"));
+    if (!ta) return;
+    const s = ta.selectionStart ?? ta.value.length, en = ta.selectionEnd ?? ta.value.length;
+    ta.value = ta.value.slice(0, s) + ch + ta.value.slice(en);
+    ta.focus();
+    const pos = s + ch.length;
+    try { ta.setSelectionRange(pos, pos); } catch {}
   }
 
   async function sendNotice() {
@@ -554,7 +572,15 @@ window.AdminStudio = (function () {
     if (nPanel && !nPanel.dataset.ready) {
       nPanel.innerHTML = noticesUI();
       nPanel.dataset.ready = "1";
+      nPanel.addEventListener("focusin", (e) => {
+        if (e.target.id === "anTitle" || e.target.id === "anBody") lastFocusedField = e.target.id;
+      });
+      // keep the text field focused when an emoji is tapped, so the emoji
+      // lands where the cursor is instead of the button stealing focus
+      nPanel.addEventListener("mousedown", (e) => { if (e.target.closest("[data-emoji]")) e.preventDefault(); });
       nPanel.addEventListener("click", (e) => {
+        const em = e.target.closest("[data-emoji]");
+        if (em) return insertEmoji(em.dataset.emoji);
         if (e.target.closest("#anSend")) return void sendNotice();
         const del = e.target.closest("[data-andel]");
         if (del) {

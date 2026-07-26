@@ -109,6 +109,10 @@
     .ann-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
     .ann-form input, .ann-form select, .ann-form textarea { width: 100%; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 14px; font-family: inherit; outline: none; resize: vertical; }
     .ann-form input:focus, .ann-form textarea:focus { border-color: var(--accent); }
+    .emoji-bar { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+    .emoji-btn { border: 1px solid var(--border); background: var(--surface-2); border-radius: 9px; padding: 4px 7px; font-size: 18px; line-height: 1; cursor: pointer; transition: transform .1s, border-color .1s; }
+    .emoji-btn:hover { transform: scale(1.18); border-color: var(--accent); }
+    .emoji-btn:active { transform: scale(.9); }
 
     /* ---- design studio ---- */
     .ds-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
