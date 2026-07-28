@@ -1239,6 +1239,14 @@ h1, .hero h1, .acct-body h3 { letter-spacing: -.02em; font-weight: 900; }
 .lib-spin { text-align: center; font-size: 34px; padding: 40px 0; }
 @media (max-width: 560px) { .lib-grid { grid-template-columns: 1fr 1fr; } .lib-filters { grid-template-columns: 1fr; } }
 
+/* exercise category chips (All / Strength / Cardio / …) */
+.lib-cats { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+.lib-cat { border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  border-radius: 999px; padding: 7px 15px; font-size: 13px; font-weight: 700; cursor: pointer;
+  white-space: nowrap; transition: border-color .12s, color .12s, background .12s; }
+.lib-cat:hover { border-color: var(--accent); }
+.lib-cat.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, transparent); }
+
 /* =============================================================
    Messages — inbox, conversation bubbles, unread badges
    ============================================================= */

@@ -16,6 +16,9 @@ const LIB_I18N = {
     libSub: "873 exercises — every muscle, every machine. Search, filter, learn the form.",
     libSearch: "Search exercises… (e.g. squat, biceps, cable)",
     libMuscle: "Muscle", libEquip: "Equipment", libLevel: "Level", libAll: "All",
+    cat_strength: "Strength", cat_cardio: "Cardio", cat_plyometrics: "Plyometrics",
+    cat_stretching: "Flexibility", cat_powerlifting: "Powerlifting",
+    "cat_olympic weightlifting": "Olympic", cat_strongman: "Strongman",
     libResults: "exercises", libShowMore: "Show more", libNone: "No exercises match — clear a filter or try another word.",
     libPrimary: "Primary muscles", libSecondary: "Secondary muscles",
     libHow: "How to do it", libWatch: "Watch video guide", libSearchYT: "Find video on YouTube",
@@ -41,6 +44,9 @@ const LIB_I18N = {
     libSub: "873 تمريناً — كل عضلة وكل جهاز. ابحث وصفِّ وتعلّم الأداء الصحيح.",
     libSearch: "ابحث عن تمرين… (مثل squat أو biceps)",
     libMuscle: "العضلة", libEquip: "المعدات", libLevel: "المستوى", libAll: "الكل",
+    cat_strength: "قوة", cat_cardio: "كارديو", cat_plyometrics: "بلايومترك",
+    cat_stretching: "مرونة", cat_powerlifting: "رفع القوة",
+    "cat_olympic weightlifting": "رفع أولمبي", cat_strongman: "سترونجمان",
     libResults: "تمرين", libShowMore: "عرض المزيد", libNone: "لا توجد تمارين مطابقة — أزل فلتراً أو جرّب كلمة أخرى.",
     libPrimary: "العضلات الأساسية", libSecondary: "العضلات المساعدة",
     libHow: "طريقة الأداء", libWatch: "شاهد فيديو الشرح", libSearchYT: "ابحث عن فيديو على يوتيوب",
@@ -65,6 +71,10 @@ const LIB_I18N = {
 Object.assign(I18N.en, LIB_I18N.en);
 Object.assign(I18N.ar, LIB_I18N.ar);
 
+/* category chips (the exercise's `cat` field), ordered by how commonly
+   people look for them; "" = All */
+const CATS = ["", "strength", "cardio", "plyometrics", "stretching", "powerlifting", "olympic weightlifting", "strongman"];
+const catLabel = (c) => c ? t("cat_" + c) : t("libAll");
 const MUSCLES = ["quadriceps", "shoulders", "abdominals", "chest", "hamstrings", "triceps", "biceps", "lats", "middle back", "calves", "lower back", "forearms", "glutes", "traps", "adductors", "abductors", "neck"];
 const EQUIPMENT = ["barbell", "dumbbell", "body only", "cable", "machine", "kettlebells", "bands", "medicine ball", "exercise ball", "foam roll", "e-z curl bar", "other"];
 const musLabel = (m) => t("mus_" + m);
@@ -72,12 +82,12 @@ const eqLabel = (e) => t("eq_" + e);
 const lvlLabel = (l) => t("lvl_" + l);
 
 /* ---------- state ---------- */
-let libQ = "", libMuscle = "", libEquip = "", libLevel = "";
+let libQ = "", libCat = "", libMuscle = "", libEquip = "", libLevel = "";
 let libShown = 30;
 let libDetail = null;   // index into EXLIB
 let libLoading = false;
 
-function resetLibrary() { libQ = ""; libMuscle = ""; libEquip = ""; libLevel = ""; libShown = 30; libDetail = null; }
+function resetLibrary() { libQ = ""; libCat = ""; libMuscle = ""; libEquip = ""; libLevel = ""; libShown = 30; libDetail = null; }
 
 /* ---------- lazy data load ---------- */
 function libEnsureData() {
@@ -95,6 +105,7 @@ function libEnsureData() {
 function libFiltered() {
   const q = libQ.trim().toLowerCase();
   return window.EXLIB.map((x, i) => ({ x, i })).filter(({ x }) => {
+    if (libCat && x.cat !== libCat) return false;
     if (libMuscle && !(x.m || []).includes(libMuscle)) return false;
     if (libEquip && x.eq !== libEquip) return false;
     if (libLevel && x.lv !== libLevel) return false;
@@ -112,6 +123,7 @@ function secLibrary() {
   return `
   <h3>📚 ${t("libTitle")}</h3>
   <div class="h-sub">${t("libSub")}</div>
+  <div class="lib-cats">${CATS.map(c => `<button class="lib-cat ${libCat === c ? "on" : ""}" data-libcat="${esc(c)}">${catLabel(c)}</button>`).join("")}</div>
   <input class="ob-input lib-search" id="libSearch" type="search" placeholder="${t("libSearch")}" value="${esc(libQ)}">
   <div class="lib-filters">
     <select id="libMuscle">${selOpt(MUSCLES, libMuscle, t("libMuscle"))}</select>
@@ -183,6 +195,13 @@ function libRefreshResults() {
 /* ---------- events (routed from onAuthClick / onAuthChange) ---------- */
 function handleLibClick(e) {
   const hit = (s) => e.target.closest(s);
+  const cat = hit("[data-libcat]");
+  if (cat) {
+    libCat = cat.dataset.libcat; libShown = 30;
+    document.querySelectorAll("[data-libcat]").forEach(b => b.classList.toggle("on", b.dataset.libcat === libCat));
+    libRefreshResults();
+    return true;
+  }
   const open = hit("[data-libopen]");
   if (open) { libDetail = parseInt(open.dataset.libopen, 10); reRenderSection(); return true; }
   if (hit("#libBack")) { libDetail = null; reRenderSection(); return true; }
