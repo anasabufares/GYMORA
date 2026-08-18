@@ -174,17 +174,30 @@ function libResultsHTML() {
 function libDetailHTML(x, i) {
   const local = typeof exLocalVid === "function" ? exLocalVid(x.n) : null;
   const vid = typeof exVidId === "function" ? exVidId(x.n) : null;
+  const unlocked = typeof videoUnlocked === "function" ? videoUnlocked(x.n) : true;
   const ytq = encodeURIComponent(x.n + " exercise form");
   const imgs = (x.img || []).slice(0, 2).map(im => EXLIB_IMG_BASE + im);
   // In-app animated demo: loop between the start and finish positions.
-  const media = local
+  // A self-hosted video only plays inline when the user may watch it.
+  // For a Premium exercise the preview is blurred behind a "subscribe
+  // to unlock" overlay (tapping it opens the subscription paywall).
+  const hasVideo = !!(local || vid);
+  const lockOverlay = `
+    <button class="ex-lock-overlay" data-exn="${esc(x.n)}" ${local ? `data-localvideo="${esc(local)}"` : `data-video="${vid}"`} data-vtitle="${esc(x.n)}">
+      <span class="pm-lock">🔒</span>
+      <span class="ex-lock-txt">${t("vidUnlock")}</span>
+      <span class="btn sm">${t("vidLockCta")}</span>
+    </button>`;
+  const media = (local && unlocked)
     ? `<div class="ex-anim"><video src="${esc(local)}" autoplay loop muted playsinline controls
          style="width:100%;height:100%;object-fit:contain;background:#0d0d0d"></video></div>`
-    : imgs.length >= 2
-      ? `<div class="ex-anim"><img class="ex-anim-a" src="${esc(imgs[0])}" alt=""><img class="ex-anim-b" src="${esc(imgs[1])}" alt=""><span class="ex-anim-tag">${t("libAnimated")}</span></div>`
-      : imgs.length === 1
-        ? `<div class="ex-anim"><img class="ex-anim-a" src="${esc(imgs[0])}" alt="" style="position:static"></div>`
-        : "";
+    : (hasVideo && !unlocked && imgs.length)
+      ? `<div class="ex-anim ex-locked"><img class="ex-anim-a" src="${esc(imgs[0])}" alt="" style="position:static">${lockOverlay}</div>`
+      : imgs.length >= 2
+        ? `<div class="ex-anim"><img class="ex-anim-a" src="${esc(imgs[0])}" alt=""><img class="ex-anim-b" src="${esc(imgs[1])}" alt=""><span class="ex-anim-tag">${t("libAnimated")}</span></div>`
+        : imgs.length === 1
+          ? `<div class="ex-anim"><img class="ex-anim-a" src="${esc(imgs[0])}" alt="" style="position:static"></div>`
+          : "";
   return `
   <button class="linkbtn" id="libBack" style="display:inline-block;margin:0 0 12px">‹ ${t("libBack")}</button>
   <h3>${esc(x.n)}</h3>
@@ -200,10 +213,11 @@ function libDetailHTML(x, i) {
     <ol class="lib-steps">${x.ins.map(s => `<li>${esc(s)}</li>`).join("")}</ol>
   </div>` : ""}
   ${local
-    ? `<button class="btn block" data-localvideo="${esc(local)}" data-vtitle="${esc(x.n)}">▶ ${t("libWatch")}</button>`
+    ? `<button class="btn block${unlocked ? "" : " locked"}" data-localvideo="${esc(local)}" data-exn="${esc(x.n)}" data-vtitle="${esc(x.n)}">${unlocked ? "▶" : "🔒"} ${t("libWatch")}</button>`
     : vid
-      ? `<button class="btn block" data-video="${vid}" data-vtitle="${esc(x.n)}">▶ ${t("libWatch")}</button>`
+      ? `<button class="btn block${unlocked ? "" : " locked"}" data-video="${vid}" data-exn="${esc(x.n)}" data-vtitle="${esc(x.n)}">${unlocked ? "▶" : "🔒"} ${t("libWatch")}</button>`
       : `<a class="btn ghost block" style="text-align:center" href="https://www.youtube.com/results?search_query=${ytq}" target="_blank" rel="noopener">▶ ${t("libSearchYT")}</a>`}
+  ${(local || vid) && !unlocked ? `<div class="note" style="text-align:center">🔒 ${t("vidLockBody")}</div>` : ""}
   <button class="btn ghost block" id="libAddWorkout" data-libadd="${i}" style="margin-top:8px">➕ ${t("libAddWorkout")}</button>`;
 }
 
