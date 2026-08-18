@@ -1194,6 +1194,13 @@ h1, .hero h1, .acct-body h3 { letter-spacing: -.02em; font-weight: 900; }
   radial-gradient(circle, var(--accent) 0 5px, transparent 6px); }
 .pm-pay-form { display: grid; gap: 8px; margin-top: 12px; }
 .pm-pay-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pay-list { display: grid; gap: 8px; margin-top: 12px; }
+.pay-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2);
+}
+.pay-row-lbl { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.pay-row-act { display: flex; align-items: center; gap: 12px; flex: none; }
 
 /* ---------- Exercise form-guide videos ---------- */
 .vid-btn {
