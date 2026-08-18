@@ -22,6 +22,7 @@ const LIB_I18N = {
     chip_push: "Push", chip_pull: "Pull", chip_upper: "Upper body",
     chip_lower: "Lower body", chip_core: "Core", chip_arms: "Arms",
     libResults: "exercises", libShowMore: "Show more", libNone: "No exercises match — clear a filter or try another word.",
+    libLockedCount: "{n} more exercises — subscribe to unlock the full library.",
     libPrimary: "Primary muscles", libSecondary: "Secondary muscles",
     libHow: "How to do it", libWatch: "Watch video guide", libSearchYT: "Find video on YouTube",
     libLoading: "Loading the exercise library…",
@@ -52,6 +53,7 @@ const LIB_I18N = {
     chip_push: "دفع", chip_pull: "سحب", chip_upper: "الجزء العلوي",
     chip_lower: "الجزء السفلي", chip_core: "الجذع", chip_arms: "الذراعان",
     libResults: "تمرين", libShowMore: "عرض المزيد", libNone: "لا توجد تمارين مطابقة — أزل فلتراً أو جرّب كلمة أخرى.",
+    libLockedCount: "{n} تمرين إضافي — اشترك لفتح المكتبة كاملة.",
     libPrimary: "العضلات الأساسية", libSecondary: "العضلات المساعدة",
     libHow: "طريقة الأداء", libWatch: "شاهد فيديو الشرح", libSearchYT: "ابحث عن فيديو على يوتيوب",
     libLoading: "نحمّل مكتبة التمارين…",
@@ -154,21 +156,40 @@ function secLibrary() {
   <div id="libResults">${libResultsHTML()}</div>`;
 }
 
+/* Free members see the first LIB_FREE_CARDS exercises; the rest of the
+   grid is blurred behind a subscribe overlay. Premium/trial: no limit. */
+const LIB_FREE_CARDS = 6;
 function libResultsHTML() {
   const list = libFiltered();
   const shown = list.slice(0, libShown);
-  const cards = shown.map(({ x, i }) => `
+  const premium = typeof premiumActive === "function" && typeof currentUser === "function" && premiumActive(currentUser());
+  const cards = shown.map(({ x, i }, idx) => {
+    const locked = !premium && idx >= LIB_FREE_CARDS;
+    if (locked) {
+      return `
+    <button class="lib-card lib-locked" data-vidlock="1" data-exn="${esc(x.n)}" data-vtitle="${esc(x.n)}">
+      <img class="lib-thumb" src="${EXLIB_IMG_BASE}${esc(x.img[0])}" alt="">
+      <div class="lib-card-lock"><span class="pm-lock">🔒</span></div>
+    </button>`;
+    }
+    return `
     <button class="lib-card" data-libopen="${i}">
       <img class="lib-thumb" src="${EXLIB_IMG_BASE}${esc(x.img[0])}" alt="">
       <div class="lib-card-body">
         <div class="lib-name">${esc(x.n)}</div>
         <div class="lib-meta">${(x.m || []).slice(0, 2).map(m => `<span class="chip lib-chip">${musLabel(m)}</span>`).join("")}<span class="chip lib-chip lv-${x.lv}">${lvlLabel(x.lv)}</span></div>
       </div>
-    </button>`).join("");
+    </button>`;
+  }).join("");
+  const lockedNote = !premium && list.length > LIB_FREE_CARDS
+    ? `<button class="btn block" id="libUnlock" style="margin-top:12px">🔒 ${t("vidLockCta")}</button>
+       <div class="note" style="text-align:center">${t("libLockedCount").replace("{n}", list.length - LIB_FREE_CARDS)}</div>`
+    : "";
   return `
     <div class="count" style="margin:10px 0 8px">${list.length} ${t("libResults")}</div>
     ${list.length ? `<div class="lib-grid">${cards}</div>` : `<div class="note">${t("libNone")}</div>`}
-    ${list.length > libShown ? `<button class="btn ghost block" id="libMore" style="margin-top:12px">${t("libShowMore")} (${list.length - libShown})</button>` : ""}`;
+    ${lockedNote}
+    ${premium && list.length > libShown ? `<button class="btn ghost block" id="libMore" style="margin-top:12px">${t("libShowMore")} (${list.length - libShown})</button>` : ""}`;
 }
 
 function libDetailHTML(x, i) {
@@ -250,6 +271,7 @@ function handleLibClick(e) {
     return true;
   }
   if (hit("#libMore")) { libShown += 30; libRefreshResults(); return true; }
+  if (hit("#libUnlock")) { if (typeof pmOpenSubscription === "function") pmOpenSubscription(); return true; }
   return false;
 }
 function handleLibChange(e) {
