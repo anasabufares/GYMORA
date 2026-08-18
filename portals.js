@@ -122,7 +122,7 @@ function navForRole(u) {
   const news = ["notices", "📣", t("ntTab")];
   // members open tickets; staff, owners and admins work the queue
   const tickets = ["tickets", "🎫", isStaffRole(u.role) && u.role !== "coach" ? t("tkQueue") : t("tkTab")];
-  const common = [msg, tickets, news, ["preferences", "⚙️", t("preferences")], ["security", "🔒", t("security")]];
+  const common = [msg, tickets, news, ["preferences", "⚙️", t("preferences")], ["security", "🔒", t("security")], ["legal", "📑", t("legalTab")]];
   if (u.role === "coach") return [["coach", "🧑‍🏫", t("coachPortal")], ["profile", "👤", t("myProfile")], ...common];
   if (u.role === "owner") return [["profile", "👤", t("myProfile")], ...common]; // the owner dashboard lives on the front page (My Gym circle)
   if (u.role === "staff") return [["staff", "🪪", t("staffDash")], ["profile", "👤", t("myProfile")], ...common];
@@ -138,7 +138,7 @@ function navForRole(u) {
     ["points", "🏅", t("pointsRewards")], ["inbody", "🧬", t("inbodyScan")],
     ["security", "🔒", t("security")],
     ["privacy", "🛡️", t("privacy")], ["notifications", "🔔", t("notifications")],
-    ["preferences", "⚙️", t("preferences")], ["danger", "⚠️", t("dangerZone")],
+    ["preferences", "⚙️", t("preferences")], ["legal", "📑", t("legalTab")], ["danger", "⚠️", t("dangerZone")],
   ];
 }
 

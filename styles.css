@@ -1201,6 +1201,11 @@ h1, .hero h1, .acct-body h3 { letter-spacing: -.02em; font-weight: 900; }
 }
 .pay-row-lbl { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
 .pay-row-act { display: flex; align-items: center; gap: 12px; flex: none; }
+/* ---------- Legal / policy ---------- */
+.pol-p { font-size: 13.5px; line-height: 1.6; color: var(--text); margin: 8px 0; }
+.pol-sec h4 { margin-bottom: 4px; }
+.pol-modal { max-width: 640px; max-height: 88vh; display: flex; flex-direction: column; }
+.pol-scroll { overflow-y: auto; margin-top: 8px; padding-inline-end: 4px; }
 
 /* ---------- Exercise form-guide videos ---------- */
 .vid-btn {

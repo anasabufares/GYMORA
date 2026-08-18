@@ -364,8 +364,7 @@ function pmValidatePayment() {
     const name = (document.getElementById("pmCardName")?.value || "").trim();
     const exp = (document.getElementById("pmCardExp")?.value || "").trim();
     const cvc = (document.getElementById("pmCardCvc")?.value || "").trim();
-    if (!/^\d{13,19}$/.test(num) || !name || !/^\d{2}\s*\/?\s*\d{2}$/.test(exp) || !/^\d{3,4}$/.test(cvc)) return false;
-    return true;
+    return pmValidCard(num, name, exp, cvc);
   }
   if (pmPayMethod === "cliq") {
     const alias = (document.getElementById("pmCliqAlias")?.value || "").trim();
@@ -412,6 +411,39 @@ function cardBrand(num) {
   if (/^(5[1-5]|2[2-7])/.test(n)) return "Mastercard";
   if (/^3[47]/.test(n)) return "Amex";
   return "Card";
+}
+/* Supported networks for real charges (Amex not accepted by our gateway). */
+const PM_SUPPORTED_BRANDS = ["Visa", "Mastercard"];
+/* Luhn checksum — rejects mistyped / obviously-fake card numbers. */
+function luhnOk(num) {
+  const n = String(num || "").replace(/\D/g, "");
+  if (n.length < 13 || n.length > 19) return false;
+  let sum = 0, alt = false;
+  for (let i = n.length - 1; i >= 0; i--) {
+    let d = +n[i];
+    if (alt) { d *= 2; if (d > 9) d -= 9; }
+    sum += d; alt = !alt;
+  }
+  return sum % 10 === 0;
+}
+/* expiry "MM/YY" (spaces/slash flexible) must be a real month, not past. */
+function expiryOk(exp) {
+  const m = String(exp || "").replace(/\s/g, "").match(/^(\d{2})\/?(\d{2})$/);
+  if (!m) return false;
+  const mm = +m[1], yy = 2000 + +m[2];
+  if (mm < 1 || mm > 12) return false;
+  const end = new Date(yy, mm, 1);           // first day of the month AFTER expiry
+  return end > new Date();
+}
+/* Full card check used by both the checkout and the wallet. */
+function pmValidCard(num, name, exp, cvc) {
+  const n = String(num || "").replace(/\s+/g, "");
+  if (!luhnOk(n)) return false;
+  if (PM_SUPPORTED_BRANDS.indexOf(cardBrand(n)) === -1) return false;
+  if (!name || String(name).trim().length < 2) return false;
+  if (!expiryOk(exp)) return false;
+  if (!/^\d{3,4}$/.test(String(cvc || "").trim())) return false;
+  return true;
 }
 function pmAddSavedMethod(rec) {
   const u = currentUser(); if (!u) return;
@@ -505,7 +537,7 @@ function paySaveFromForm() {
     const name = (document.getElementById("payCardName")?.value || "").trim();
     const exp = (document.getElementById("payCardExp")?.value || "").trim();
     const cvc = (document.getElementById("payCardCvc")?.value || "").trim();
-    if (!/^\d{13,19}$/.test(num) || !name || !/^\d{2}\s*\/?\s*\d{2}$/.test(exp) || !/^\d{3,4}$/.test(cvc)) return false;
+    if (!pmValidCard(num, name, exp, cvc)) return false;
     pmAddSavedMethod({ type: "card", brand: cardBrand(num), last4: num.slice(-4), exp: exp.replace(/\s/g, ""), name });
     return true;
   }
