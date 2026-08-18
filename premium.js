@@ -38,6 +38,12 @@ const PM_I18N = {
     pmTimeLeft: "Time left", pmChangePlan: "Change plan", pmCurrent: "Current",
     pmTrialPick: "You're on the free trial — pick a plan to keep your plan & workouts after it ends.",
     pmIncluded: "What's included",
+    pmCancel: "Cancel subscription",
+    pmCancelConfirm: "Cancel your subscription? You'll keep access until it expires, and it won't renew.",
+    pmCancelKeep: "Keep subscription",
+    pmCancelYes: "Yes, cancel",
+    pmCanceled: "Your subscription has been canceled.",
+    pmCancelNote: "Access continues until the end of your current period.",
   },
   ar: {
     pmTitle: "GYMORA بريميوم",
@@ -67,6 +73,12 @@ const PM_I18N = {
     pmTimeLeft: "الوقت المتبقي", pmChangePlan: "تغيير الخطة", pmCurrent: "الحالية",
     pmTrialPick: "أنت في التجربة المجانية — اختر خطة للاحتفاظ بخطتك وتمارينك بعد انتهائها.",
     pmIncluded: "ماذا يشمل الاشتراك",
+    pmCancel: "إلغاء الاشتراك",
+    pmCancelConfirm: "هل تريد إلغاء اشتراكك؟ ستحتفظ بالوصول حتى انتهاء المدة، ولن يتجدد.",
+    pmCancelKeep: "الاحتفاظ بالاشتراك",
+    pmCancelYes: "نعم، إلغاء",
+    pmCanceled: "تم إلغاء اشتراكك.",
+    pmCancelNote: "يستمر الوصول حتى نهاية الفترة الحالية.",
   },
 };
 Object.assign(I18N.en, PM_I18N.en);
@@ -85,6 +97,7 @@ const pmLabel = (key) => ({ weekly: t("pmWeekly"), monthly: t("pmMonthly"), year
 const pmPer = (key) => ({ weekly: t("pmPerWeek"), monthly: t("pmPerMonth"), yearly: t("pmPerYear") }[key]);
 
 let pmSelected = null; // plan key on the confirm step
+let pmConfirmCancel = false; // showing the cancel-confirmation step
 
 /* ---------- state ---------- */
 function premiumActive(u) { return !!(u && u.sub && u.sub.until > Date.now()); }
@@ -100,6 +113,14 @@ function premiumSubscribe(key) {
   const now = Date.now();
   updateUser({ sub: { plan: key, since: now, until: now + p.days * 86400000 } });
   toast(t("pmActive"));
+}
+/* Cancel = stop auto-renew. Access continues until the current period
+   ends (sub.until), then premiumActive() returns false on its own. */
+function premiumCancel() {
+  const u = currentUser();
+  if (!u || !u.sub) return;
+  updateUser({ sub: Object.assign({}, u.sub, { canceled: true }) });
+  toast(t("pmCanceled"));
 }
 
 /* ---------- gate: wraps the plan / workouts sections ---------- */
@@ -160,6 +181,7 @@ function pmConfirmHTML(u) {
 function secPremiumTab(u) {
   if (!premiumActive(u)) return paywallHTML(u); // pricing + trial (and confirm step)
   if (pmSelected) return pmConfirmHTML(u);
+  if (pmConfirmCancel) return pmCancelHTML(u);
   const s = u.sub, d = pmDaysLeft(u);
   const total = Math.max(1, Math.ceil((s.until - s.since) / 86400000));
   const pct = Math.max(3, Math.min(100, Math.round((d / total) * 100)));
@@ -197,7 +219,19 @@ function secPremiumTab(u) {
     <h4>🔄 ${t("pmChangePlan")}</h4>
     <div class="pm-cards">${cards}</div>
   </div>
-  <div class="note">💳 ${t("pmDemoNote")}</div>`;
+  <div class="note">💳 ${t("pmDemoNote")}</div>
+  ${s.canceled
+    ? `<div class="note" style="text-align:center;margin-top:10px">🚫 ${t("pmCanceled")} ${t("pmCancelNote")}</div>`
+    : `<button class="btn ghost block" id="pmCancelSub" style="margin-top:14px;color:#ef4444">${t("pmCancel")}</button>`}`;
+}
+
+/* cancel-confirmation step */
+function pmCancelHTML(u) {
+  return `
+  <h3>${t("pmCancel")}</h3>
+  <div class="note" style="margin:10px 0 16px">${t("pmCancelConfirm")}</div>
+  <button class="btn block" id="pmCancelKeep">${t("pmCancelKeep")}</button>
+  <button class="btn ghost block" id="pmCancelYes" style="margin-top:8px;color:#ef4444">${t("pmCancelYes")}</button>`;
 }
 
 /* ---------- events (routed from onAuthClick) ---------- */
@@ -208,14 +242,17 @@ function handlePremiumClick(e) {
   if (hit("#pmTrial")) { premiumStartTrial(); reRenderSection(); return true; }
   if (hit("#pmConfirm")) { premiumSubscribe(pmSelected); pmSelected = null; reRenderSection(); return true; }
   if (hit("#pmCancel")) { pmSelected = null; reRenderSection(); return true; }
+  if (hit("#pmCancelSub")) { pmConfirmCancel = true; reRenderSection(); return true; }
+  if (hit("#pmCancelKeep")) { pmConfirmCancel = false; reRenderSection(); return true; }
+  if (hit("#pmCancelYes")) { premiumCancel(); pmConfirmCancel = false; reRenderSection(); return true; }
   return false;
 }
-function resetPremium() { pmSelected = null; }
+function resetPremium() { pmSelected = null; pmConfirmCancel = false; }
 
 /* Open the account drawer straight onto the Subscription tab.
    Used by upsell prompts elsewhere (e.g. the locked video paywall). */
 function pmOpenSubscription() {
-  pmSelected = null;
+  pmSelected = null; pmConfirmCancel = false;
   if (typeof openAuth === "function") openAuth("account");
   if (typeof switchSection === "function") switchSection("premium");
 }
