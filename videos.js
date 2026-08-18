@@ -9,11 +9,44 @@
    ============================================================= */
 
 const VID_I18N = {
-  en: { vidGuide: "Form guide", vidWatchYT: "Watch on YouTube" },
-  ar: { vidGuide: "شرح الأداء الصحيح", vidWatchYT: "شاهد على يوتيوب" },
+  en: {
+    vidGuide: "Form guide", vidWatchYT: "Watch on YouTube",
+    vidLockTitle: "Premium video 🔒",
+    vidLockBody: "Free members get a few sample form-guide videos. Subscribe to unlock the full video library for every exercise.",
+    vidLockCta: "See subscription plans ⭐",
+    vidFreeNote: "Free preview",
+  },
+  ar: {
+    vidGuide: "شرح الأداء الصحيح", vidWatchYT: "شاهد على يوتيوب",
+    vidLockTitle: "فيديو بريميوم 🔒",
+    vidLockBody: "يحصل الأعضاء المجانيون على عدد محدود من فيديوهات الشرح. اشترك لفتح مكتبة الفيديو الكاملة لكل تمرين.",
+    vidLockCta: "اعرض خطط الاشتراك ⭐",
+    vidFreeNote: "معاينة مجانية",
+  },
 };
 Object.assign(I18N.en, VID_I18N.en);
 Object.assign(I18N.ar, VID_I18N.ar);
+
+/* ---------- free vs premium gating ----------
+   Free members can watch a small set of sample form-guide videos.
+   Every other exercise video is a Premium feature. Playback is gated
+   centrally in the delegated click handler below, so it covers the
+   ▶ buttons everywhere (plan, workout tracker, rank, exercise library). */
+const FREE_EXERCISE_VIDEOS = new Set([
+  "bench press",
+  "squats",
+  "squat",
+  "deadlift",
+]);
+function exIsFreeVideo(en) {
+  return FREE_EXERCISE_VIDEOS.has(String(en || "").toLowerCase().trim());
+}
+/* true when this exercise's video may be played by the current user */
+function videoUnlocked(en) {
+  const premium = typeof premiumActive === "function" && typeof currentUser === "function"
+    && premiumActive(currentUser());
+  return premium || exIsFreeVideo(en);
+}
 
 /* ---------- self-hosted (in-app) videos ----------
    A file listed in EXVIDS_LOCAL (see exvideos-local.js) plays as a
@@ -85,7 +118,8 @@ function exVidBtn(en, label) {
     ? `data-localvideo="${esc(local)}"`
     : (exVidId(en) ? `data-video="${exVidId(en)}"` : null);
   if (!attr) return "";
-  return `<button class="vid-btn" ${attr} data-vtitle="${esc(label || en)}" title="${t("vidGuide")}" aria-label="${t("vidGuide")}">▶</button>`;
+  const locked = !videoUnlocked(en);
+  return `<button class="vid-btn${locked ? " locked" : ""}" ${attr} data-exn="${esc(en)}" data-vtitle="${esc(label || en)}" title="${locked ? t("vidLockTitle") : t("vidGuide")}" aria-label="${locked ? t("vidLockTitle") : t("vidGuide")}">${locked ? "🔒" : "▶"}</button>`;
 }
 
 /* ---------- modal player ---------- */
@@ -137,8 +171,34 @@ function closeVideo() {
   if (el) { el.classList.remove("open"); el.innerHTML = ""; } // clearing the media stops playback
 }
 
-/* delegated: [data-localvideo] plays in-app; [data-video] uses YouTube */
+/* paywall shown when a free member taps a Premium video */
+function openVideoPaywall(title) {
+  const el = vidContainer();
+  el.innerHTML = `
+  <div class="vid-modal vid-lock-modal">
+    <button class="auth-x" id="vidX">✕</button>
+    <div class="pm-lock">🔒</div>
+    <div class="vid-title" style="text-align:center">${t("vidLockTitle")}</div>
+    ${title ? `<div class="h-sub" style="text-align:center">${esc(title)}</div>` : ""}
+    <div class="note" style="text-align:center;margin:10px 0 16px">${t("vidLockBody")}</div>
+    <button class="btn block" id="vidSubscribe">${t("vidLockCta")}</button>
+  </div>`;
+  el.classList.add("open");
+}
+
+/* delegated: [data-localvideo] plays in-app; [data-video] uses YouTube.
+   Both are gated — free members can only play sample exercises. */
 document.addEventListener("click", (e) => {
+  if (e.target.closest("#vidSubscribe")) {
+    e.preventDefault();
+    closeVideo();
+    if (typeof pmOpenSubscription === "function") pmOpenSubscription();
+    return;
+  }
+  const media = e.target.closest("[data-localvideo],[data-video]");
+  if (!media) return;
+  const exn = media.dataset.exn || media.dataset.vtitle || "";
+  if (!videoUnlocked(exn)) { e.preventDefault(); openVideoPaywall(media.dataset.vtitle || ""); return; }
   const lv = e.target.closest("[data-localvideo]");
   if (lv) { e.preventDefault(); openLocalVideo(lv.dataset.localvideo, lv.dataset.vtitle || ""); return; }
   const b = e.target.closest("[data-video]");

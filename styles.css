@@ -1185,6 +1185,9 @@ h1, .hero h1, .acct-body h3 { letter-spacing: -.02em; font-weight: 900; }
   cursor: pointer; margin-inline-end: 6px; transition: transform .12s, filter .15s;
 }
 .vid-btn:hover { filter: brightness(1.1); transform: scale(1.1); }
+.vid-btn.locked { background: var(--border); color: var(--muted, #94a3b8); font-size: 10px; padding-inline-start: 0; }
+.btn.locked { opacity: .92; }
+.vid-lock-modal { max-width: 440px; text-align: center; }
 .ex-name { display: inline-flex; align-items: center; }
 .vid-back {
   position: fixed; inset: 0; z-index: 85; background: rgba(2,6,23,.75);

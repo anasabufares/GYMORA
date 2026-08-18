@@ -211,3 +211,11 @@ function handlePremiumClick(e) {
   return false;
 }
 function resetPremium() { pmSelected = null; }
+
+/* Open the account drawer straight onto the Subscription tab.
+   Used by upsell prompts elsewhere (e.g. the locked video paywall). */
+function pmOpenSubscription() {
+  pmSelected = null;
+  if (typeof openAuth === "function") openAuth("account");
+  if (typeof switchSection === "function") switchSection("premium");
+}
