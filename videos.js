@@ -15,6 +15,7 @@ const VID_I18N = {
     vidLockBody: "Free members get a few sample form-guide videos. Subscribe to unlock the full video library for every exercise.",
     vidLockCta: "See subscription plans ⭐",
     vidFreeNote: "Free preview",
+    vidUnlock: "Subscribe to unlock",
   },
   ar: {
     vidGuide: "شرح الأداء الصحيح", vidWatchYT: "شاهد على يوتيوب",
@@ -22,6 +23,7 @@ const VID_I18N = {
     vidLockBody: "يحصل الأعضاء المجانيون على عدد محدود من فيديوهات الشرح. اشترك لفتح مكتبة الفيديو الكاملة لكل تمرين.",
     vidLockCta: "اعرض خطط الاشتراك ⭐",
     vidFreeNote: "معاينة مجانية",
+    vidUnlock: "اشترك لفتح الفيديو",
   },
 };
 Object.assign(I18N.en, VID_I18N.en);
@@ -32,11 +34,14 @@ Object.assign(I18N.ar, VID_I18N.ar);
    Every other exercise video is a Premium feature. Playback is gated
    centrally in the delegated click handler below, so it covers the
    ▶ buttons everywhere (plan, workout tracker, rank, exercise library). */
+/* Exactly 5 free exercises (some list variant spellings of the same lift).
+   Everything else is a Premium video. */
 const FREE_EXERCISE_VIDEOS = new Set([
   "bench press",
-  "squats",
-  "squat",
+  "squats", "squat",
   "deadlift",
+  "shoulder press", "overhead press", "dumbbell shoulder press",
+  "pull-ups / lat pulldown", "lat pulldown",
 ]);
 function exIsFreeVideo(en) {
   return FREE_EXERCISE_VIDEOS.has(String(en || "").toLowerCase().trim());
