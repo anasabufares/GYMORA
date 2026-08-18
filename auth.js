@@ -176,6 +176,8 @@ function createUser(data, provider = "email") {
     privacy: { profilePublic: true, showFav: false, trainerContact: true, shareData: true },
     notif: { offers: true, expiry: true, classes: true, news: false },
     intake: null, weights: [], reminders: { gym: { on: false, time: "19:00" }, rest: { on: false, time: "10:00" } },
+    payMethods: [],
+    acceptedTerms: data.acceptedTerms || null,
   };
   users.push(u); saveUsers(users); return u;
 }
@@ -279,8 +281,11 @@ function signupHTML() {
   <div class="form-row" id="accessKeyRow" style="display:none"><label>${t("accessKey")}</label>
     <input id="inAccessKey" type="text" autocomplete="off" spellcheck="false" placeholder="CH-XXXXXX-XXXXX-XXXXX-XXXXX-XXXXX" style="text-transform:uppercase">
     <div style="font-size:12px;color:var(--muted);margin-top:6px">${t("accessKeyHint")} ${t("keyGymNote")}</div></div>
-  <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin:4px 0 12px">
+  <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin:4px 0 8px">
     <input type="checkbox" id="agreeAge"> ${t("agreeAge")}</label>
+  <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted);margin:0 0 12px">
+    <input type="checkbox" id="agreeTerms" style="margin-top:2px">
+    <span>${t("polAcceptShort").replace("{link}", `<a href="#" data-openpolicy="1" style="color:var(--accent);text-decoration:underline">${t("polAcceptLink")}</a>`)}</span></label>
   <button class="btn block" id="doSignUp">${t("signUp")}</button>
   <div class="auth-foot"><button class="auth-link" id="toSignIn">${t("haveAccount")}</button></div>
   <div class="note">${t("demoNote")}</div>`;
@@ -348,6 +353,7 @@ function sectionHTML(sec) {
   if (sec === "library" && typeof secLibrary === "function") return secLibrary(u);
   if (sec === "premium" && typeof secPremiumTab === "function") return secPremiumTab(u);
   if (sec === "paymethods" && typeof secPayMethods === "function") return secPayMethods(u);
+  if (sec === "legal" && typeof secPolicy === "function") return secPolicy(u);
   if (sec === "messages" && typeof secMessages === "function") return secMessages(u);
   if (sec === "tickets" && typeof secTickets === "function") return secTickets(u);
   if (sec === "notices" && typeof secNotices === "function") return secNotices(u);
@@ -648,6 +654,7 @@ async function handleSignUp() {
   const name = val("inName").trim(), email = val("inEmail").trim().toLowerCase();
   const ageStr = val("inAge"), age = parseInt(ageStr, 10), pw = val("inPassword"), cf = val("inConfirm");
   const agree = document.getElementById("agreeAge").checked;
+  const agreeTerms = document.getElementById("agreeTerms") ? document.getElementById("agreeTerms").checked : false;
   const role = val("inRole") || "user", gymId = val("inGym") || null;
   const needsKey = role === "coach" || role === "staff" || role === "owner";
   const phone = val("inPhone").trim();
@@ -656,6 +663,7 @@ async function handleSignUp() {
   if (!validEmail(email)) return showErr(t("emailInvalid"));
   if (!(age >= 12 && age <= 100)) return showErr(t("ageInvalid"));
   if (!agree) return showErr(t("ageInvalid"));
+  if (!agreeTerms) return showErr(typeof t === "function" ? t("polMustAccept") : "Please accept the Terms & Privacy Policy.");
   if (pw.length < 6) return showErr(t("pwShort"));
   if (pw !== cf) return showErr(t("pwMismatch"));
   if (needsKey && !phone) return showErr(t("phoneMissing"));
@@ -678,13 +686,13 @@ async function handleSignUp() {
       if (!rec) return showErr(t("accessKeyBad"));
       grantedRole = rec.role; grantedGym = rec.gymId || gymId;
     }
-    const nu = createUser({ name, email, age, pw, phone, role: grantedRole, gymId: grantedGym });
+    const nu = createUser({ name, email, age, pw, phone, role: grantedRole, gymId: grantedGym, acceptedTerms: { version: (typeof POLICY_VERSION !== "undefined" ? POLICY_VERSION : "1"), at: Date.now() } });
     setSession(email);
     if (window.GymoraCloud) GymoraCloud.pushSoon(nu); // background: sync the full profile
     return startVerify();
   }
 
-  const nu = createUser({ name, email, age, pw, role, gymId }); setSession(email);
+  const nu = createUser({ name, email, age, pw, role, gymId, acceptedTerms: { version: (typeof POLICY_VERSION !== "undefined" ? POLICY_VERSION : "1"), at: Date.now() } }); setSession(email);
   if (window.GymoraCloud) {
     const r = await GymoraCloud.signup(email, pw, nu); // create the cloud account
     // Backend reachable but refused it (almost always: email already
