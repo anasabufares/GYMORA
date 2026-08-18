@@ -1176,6 +1176,24 @@ h1, .hero h1, .acct-body h3 { letter-spacing: -.02em; font-weight: 900; }
   border: 1px solid var(--accent); color: var(--text);
 }
 @media (max-width: 560px) { .pm-cards { grid-template-columns: 1fr; } .pm-badge { inset-inline: auto 12px; } }
+/* ---------- Payment methods / checkout ---------- */
+.pm-pays { display: grid; gap: 8px; }
+.pm-pay {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: start;
+  padding: 12px 14px; border-radius: 12px; cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--surface-2); color: var(--text);
+  transition: border-color .15s, background .15s;
+}
+.pm-pay:hover { border-color: var(--accent); }
+.pm-pay.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.pm-pay-ic { font-size: 22px; line-height: 1; }
+.pm-pay-txt { display: flex; flex-direction: column; flex: 1; }
+.pm-pay-txt small { color: var(--muted, #94a3b8); font-size: 11px; }
+.pm-pay-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); flex: none; }
+.pm-pay.on .pm-pay-dot { border-color: var(--accent); background:
+  radial-gradient(circle, var(--accent) 0 5px, transparent 6px); }
+.pm-pay-form { display: grid; gap: 8px; margin-top: 12px; }
+.pm-pay-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
 /* ---------- Exercise form-guide videos ---------- */
 .vid-btn {

@@ -44,6 +44,22 @@ const PM_I18N = {
     pmCancelYes: "Yes, cancel",
     pmCanceled: "Your subscription has been canceled.",
     pmCancelNote: "Access continues until the end of your current period.",
+    pmPayMethod: "Payment method",
+    pmPayCard: "Credit / Debit card",
+    pmPayCardSub: "Visa · Mastercard",
+    pmPayPaypal: "PayPal",
+    pmPayCliq: "CliQ",
+    pmPayCliqSub: "Instant bank transfer",
+    pmCardNum: "Card number", pmCardName: "Name on card",
+    pmCardExp: "MM / YY", pmCardCvc: "CVC",
+    pmPayNow: "Pay",
+    pmPaypalNote: "You'll be redirected to PayPal to complete payment securely.",
+    pmCliqAlias: "CliQ alias or mobile number",
+    pmCliqNote: "Approve the payment request in your bank app to activate.",
+    pmSecure: "Secured payment — your details are encrypted.",
+    pmPayErr: "Please check your payment details.",
+    pmProcessing: "Processing payment…",
+    pmTotal: "Total",
   },
   ar: {
     pmTitle: "GYMORA بريميوم",
@@ -79,6 +95,22 @@ const PM_I18N = {
     pmCancelYes: "نعم، إلغاء",
     pmCanceled: "تم إلغاء اشتراكك.",
     pmCancelNote: "يستمر الوصول حتى نهاية الفترة الحالية.",
+    pmPayMethod: "طريقة الدفع",
+    pmPayCard: "بطاقة ائتمان / خصم",
+    pmPayCardSub: "فيزا · ماستركارد",
+    pmPayPaypal: "باي بال",
+    pmPayCliq: "كليك (CliQ)",
+    pmPayCliqSub: "تحويل بنكي فوري",
+    pmCardNum: "رقم البطاقة", pmCardName: "الاسم على البطاقة",
+    pmCardExp: "شهر / سنة", pmCardCvc: "CVC",
+    pmPayNow: "ادفع",
+    pmPaypalNote: "سيتم تحويلك إلى باي بال لإتمام الدفع بأمان.",
+    pmCliqAlias: "اسم مستعار كليك أو رقم الجوال",
+    pmCliqNote: "وافق على طلب الدفع في تطبيق بنكك للتفعيل.",
+    pmSecure: "دفع آمن — بياناتك مشفّرة.",
+    pmPayErr: "يرجى التحقق من بيانات الدفع.",
+    pmProcessing: "جاري معالجة الدفع…",
+    pmTotal: "الإجمالي",
   },
 };
 Object.assign(I18N.en, PM_I18N.en);
@@ -98,6 +130,8 @@ const pmPer = (key) => ({ weekly: t("pmPerWeek"), monthly: t("pmPerMonth"), year
 
 let pmSelected = null; // plan key on the confirm step
 let pmConfirmCancel = false; // showing the cancel-confirmation step
+let pmPayMethod = "card"; // selected payment method: card | paypal | cliq
+let pmPaying = false; // true while the simulated charge is processing
 
 /* ---------- state ---------- */
 function premiumActive(u) { return !!(u && u.sub && u.sub.until > Date.now()); }
@@ -166,14 +200,48 @@ function paywallHTML(u) {
 }
 function pmConfirmHTML(u) {
   const key = pmSelected;
+  const methods = [
+    ["card", "💳", t("pmPayCard"), t("pmPayCardSub")],
+    ["paypal", "🅿️", t("pmPayPaypal"), "PayPal · Visa · Mastercard"],
+    ["cliq", "🏦", t("pmPayCliq"), t("pmPayCliqSub")],
+  ].map(([m, icon, name, sub]) => `
+    <button type="button" class="pm-pay ${pmPayMethod === m ? "on" : ""}" data-pmpay="${m}">
+      <span class="pm-pay-ic">${icon}</span>
+      <span class="pm-pay-txt"><b>${name}</b><small>${sub}</small></span>
+      <span class="pm-pay-dot"></span>
+    </button>`).join("");
+
+  const cardFields = `
+    <div class="pm-pay-form">
+      <input class="ob-input" id="pmCardNum" inputmode="numeric" autocomplete="cc-number" maxlength="23" placeholder="${t("pmCardNum")} — 1234 5678 9012 3456">
+      <input class="ob-input" id="pmCardName" autocomplete="cc-name" placeholder="${t("pmCardName")}">
+      <div class="pm-pay-row">
+        <input class="ob-input" id="pmCardExp" inputmode="numeric" autocomplete="cc-exp" maxlength="7" placeholder="${t("pmCardExp")}">
+        <input class="ob-input" id="pmCardCvc" inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="${t("pmCardCvc")}">
+      </div>
+    </div>`;
+  const paypalFields = `<div class="pm-pay-form"><div class="note" style="margin:0">🅿️ ${t("pmPaypalNote")}</div></div>`;
+  const cliqFields = `
+    <div class="pm-pay-form">
+      <input class="ob-input" id="pmCliqAlias" placeholder="${t("pmCliqAlias")}">
+      <div class="note" style="margin:6px 0 0">🏦 ${t("pmCliqNote")}</div>
+    </div>`;
+  const fields = pmPayMethod === "card" ? cardFields : pmPayMethod === "paypal" ? paypalFields : cliqFields;
+
   return `
   <h3>${t("pmConfirmTitle")}</h3>
   <div class="h-sub">⭐ ${t("pmTitle")}</div>
   <div class="section">
-    <div class="kv"><span>${pmLabel(key)}</span><span><b>${pmPrice(key)}</b> ${pmPer(key)}</span></div>
+    <div class="kv"><span>${pmLabel(key)}</span><span>${pmPrice(key)} ${pmPer(key)}</span></div>
+    <div class="kv"><span><b>${t("pmTotal")}</b></span><span><b>${pmPrice(key)}</b></span></div>
   </div>
-  <button class="btn block" id="pmConfirm">${t("pmActivate")}</button>
-  <button class="btn ghost block" id="pmCancel" style="margin-top:8px">${t("cancel")}</button>
+  <h4 style="margin:16px 0 8px">${t("pmPayMethod")}</h4>
+  <div class="pm-pays">${methods}</div>
+  ${fields}
+  <div class="form-err" id="pmPayErr" style="position:static;display:none;margin:8px 0 0"></div>
+  <button class="btn block" id="pmPayNow" style="margin-top:14px"${pmPaying ? " disabled" : ""}>${pmPaying ? "⏳ " + t("pmProcessing") : "🔒 " + t("pmPayNow") + " " + pmPrice(key)}</button>
+  <button class="btn ghost block" id="pmCancel" style="margin-top:8px"${pmPaying ? " disabled" : ""}>${t("cancel")}</button>
+  <div class="note" style="text-align:center">🔒 ${t("pmSecure")}</div>
   <div class="note">💳 ${t("pmDemoNote")}</div>`;
 }
 
@@ -240,19 +308,72 @@ function handlePremiumClick(e) {
   const card = hit("[data-pmplan]");
   if (card) { pmSelected = card.dataset.pmplan; reRenderSection(); return true; }
   if (hit("#pmTrial")) { premiumStartTrial(); reRenderSection(); return true; }
-  if (hit("#pmConfirm")) { premiumSubscribe(pmSelected); pmSelected = null; reRenderSection(); return true; }
-  if (hit("#pmCancel")) { pmSelected = null; reRenderSection(); return true; }
+  const pay = hit("[data-pmpay]");
+  if (pay) { pmPayMethod = pay.dataset.pmpay; reRenderSection(); return true; }
+  if (hit("#pmPayNow")) { pmProcessPayment(); return true; }
+  if (hit("#pmCancel")) { pmSelected = null; pmPaying = false; reRenderSection(); return true; }
   if (hit("#pmCancelSub")) { pmConfirmCancel = true; reRenderSection(); return true; }
   if (hit("#pmCancelKeep")) { pmConfirmCancel = false; reRenderSection(); return true; }
   if (hit("#pmCancelYes")) { premiumCancel(); pmConfirmCancel = false; reRenderSection(); return true; }
   return false;
 }
-function resetPremium() { pmSelected = null; pmConfirmCancel = false; }
+
+/* Validate the entered details for the selected method, then run the
+   (simulated) charge and activate the subscription. Wiring a real
+   processor means replacing the setTimeout block with a cloud call. */
+function pmValidatePayment() {
+  if (pmPayMethod === "card") {
+    const num = (document.getElementById("pmCardNum")?.value || "").replace(/\s+/g, "");
+    const name = (document.getElementById("pmCardName")?.value || "").trim();
+    const exp = (document.getElementById("pmCardExp")?.value || "").trim();
+    const cvc = (document.getElementById("pmCardCvc")?.value || "").trim();
+    if (!/^\d{13,19}$/.test(num) || !name || !/^\d{2}\s*\/?\s*\d{2}$/.test(exp) || !/^\d{3,4}$/.test(cvc)) return false;
+    return true;
+  }
+  if (pmPayMethod === "cliq") {
+    const alias = (document.getElementById("pmCliqAlias")?.value || "").trim();
+    return alias.length >= 3;
+  }
+  return true; // paypal: redirect handled by the processor
+}
+function pmProcessPayment() {
+  if (pmPaying) return;
+  if (!pmValidatePayment()) {
+    const err = document.getElementById("pmPayErr");
+    if (err) { err.textContent = t("pmPayErr"); err.style.display = "block"; }
+    return;
+  }
+  pmPaying = true;
+  reRenderSection();
+  // Simulated processor round-trip. Replace with a real charge call
+  // (e.g. GymoraCloud.pay(...)) and activate only on a success response.
+  setTimeout(() => {
+    premiumSubscribe(pmSelected);
+    pmSelected = null; pmPaying = false; pmPayMethod = "card";
+    reRenderSection();
+  }, 1400);
+}
+function resetPremium() { pmSelected = null; pmConfirmCancel = false; pmPaying = false; pmPayMethod = "card"; }
 
 /* Open the account drawer straight onto the Subscription tab.
    Used by upsell prompts elsewhere (e.g. the locked video paywall). */
 function pmOpenSubscription() {
-  pmSelected = null; pmConfirmCancel = false;
+  pmSelected = null; pmConfirmCancel = false; pmPaying = false; pmPayMethod = "card";
   if (typeof openAuth === "function") openAuth("account");
   if (typeof switchSection === "function") switchSection("premium");
 }
+
+/* Light input masking for the card fields (spaces every 4 digits,
+   MM/YY expiry). Delegated so it survives re-renders. */
+document.addEventListener("input", (e) => {
+  const el = e.target;
+  if (!el || !el.id) return;
+  if (el.id === "pmCardNum") {
+    el.value = el.value.replace(/\D/g, "").slice(0, 19).replace(/(.{4})/g, "$1 ").trim();
+  } else if (el.id === "pmCardExp") {
+    let v = el.value.replace(/\D/g, "").slice(0, 4);
+    el.value = v.length >= 3 ? v.slice(0, 2) + " / " + v.slice(2) : v;
+  } else if (el.id === "pmCardCvc" || el.id === "pmCardNum") {
+    el.value = el.value.replace(/\D/g, "");
+  }
+});
