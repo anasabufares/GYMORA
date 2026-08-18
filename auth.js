@@ -201,6 +201,7 @@ function openAuth(view) {
   if (view === "account") { acctSection = (typeof defaultSectionForRole === "function" ? defaultSectionForRole(currentUser()) : "menu"); secSub = "hub"; }
   if (typeof resetPlanEditing === "function") resetPlanEditing();
   if (typeof resetPremium === "function") resetPremium();
+  if (typeof resetPayMethods === "function") resetPayMethods();
   if (typeof resetLibrary === "function") resetLibrary();
   if (typeof resetNutrition === "function") resetNutrition();
   if (typeof resetPortals === "function") resetPortals(); // fresh member list each time
@@ -346,6 +347,7 @@ function sectionHTML(sec) {
   if (sec === "workouts" && typeof secWorkouts === "function") return typeof gatePremium === "function" ? gatePremium(u, secWorkouts) : secWorkouts(u);
   if (sec === "library" && typeof secLibrary === "function") return secLibrary(u);
   if (sec === "premium" && typeof secPremiumTab === "function") return secPremiumTab(u);
+  if (sec === "paymethods" && typeof secPayMethods === "function") return secPayMethods(u);
   if (sec === "messages" && typeof secMessages === "function") return secMessages(u);
   if (sec === "tickets" && typeof secTickets === "function") return secTickets(u);
   if (sec === "notices" && typeof secNotices === "function") return secNotices(u);

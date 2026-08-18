@@ -60,6 +60,20 @@ const PM_I18N = {
     pmPayErr: "Please check your payment details.",
     pmProcessing: "Processing payment…",
     pmTotal: "Total",
+    payTab: "Payment methods",
+    payTitle: "Payment methods",
+    paySub: "Add or remove the cards and wallets you pay with.",
+    payAdd: "Add payment method",
+    payNone: "No payment methods yet. Add one to subscribe or start your free trial.",
+    paySave: "Save payment method",
+    paySaved: "Payment method added ✅",
+    payRemoved: "Payment method removed.",
+    payRemove: "Remove",
+    payDefault: "Default",
+    payMakeDefault: "Make default",
+    payExpires: "Expires",
+    payTrialNeed: "Add a payment method to start your free trial.",
+    payCardName: "Cardholder name",
   },
   ar: {
     pmTitle: "GYMORA بريميوم",
@@ -111,6 +125,20 @@ const PM_I18N = {
     pmPayErr: "يرجى التحقق من بيانات الدفع.",
     pmProcessing: "جاري معالجة الدفع…",
     pmTotal: "الإجمالي",
+    payTab: "طرق الدفع",
+    payTitle: "طرق الدفع",
+    paySub: "أضِف أو احذف البطاقات والمحافظ التي تدفع بها.",
+    payAdd: "إضافة طريقة دفع",
+    payNone: "لا توجد طرق دفع بعد. أضِف واحدة للاشتراك أو لبدء تجربتك المجانية.",
+    paySave: "حفظ طريقة الدفع",
+    paySaved: "تمت إضافة طريقة الدفع ✅",
+    payRemoved: "تم حذف طريقة الدفع.",
+    payRemove: "حذف",
+    payDefault: "افتراضية",
+    payMakeDefault: "اجعلها افتراضية",
+    payExpires: "تنتهي",
+    payTrialNeed: "أضِف طريقة دفع لبدء تجربتك المجانية.",
+    payCardName: "اسم حامل البطاقة",
   },
 };
 Object.assign(I18N.en, PM_I18N.en);
@@ -305,9 +333,18 @@ function pmCancelHTML(u) {
 /* ---------- events (routed from onAuthClick) ---------- */
 function handlePremiumClick(e) {
   const hit = (s) => e.target.closest(s);
+  if (handlePayMethodClick(e)) return true;
   const card = hit("[data-pmplan]");
   if (card) { pmSelected = card.dataset.pmplan; reRenderSection(); return true; }
-  if (hit("#pmTrial")) { premiumStartTrial(); reRenderSection(); return true; }
+  if (hit("#pmTrial")) {
+    // a payment method is required before the free trial can start
+    if (!hasPayMethod(currentUser())) {
+      toast(t("payTrialNeed"));
+      if (typeof switchSection === "function") { payAdding = true; payAddMethod = "card"; switchSection("paymethods"); }
+      return true;
+    }
+    premiumStartTrial(); reRenderSection(); return true;
+  }
   const pay = hit("[data-pmpay]");
   if (pay) { pmPayMethod = pay.dataset.pmpay; reRenderSection(); return true; }
   if (hit("#pmPayNow")) { pmProcessPayment(); return true; }
@@ -363,17 +400,155 @@ function pmOpenSubscription() {
   if (typeof switchSection === "function") switchSection("premium");
 }
 
+/* ================= saved payment methods (wallet) ================= */
+let payAdding = false;       // showing the "add method" form
+let payAddMethod = "card";   // method type in the add form
+
+function pmMethods(u) { return (u && Array.isArray(u.payMethods)) ? u.payMethods : []; }
+function hasPayMethod(u) { return pmMethods(u).length > 0; }
+function cardBrand(num) {
+  const n = String(num || "").replace(/\D/g, "");
+  if (/^4/.test(n)) return "Visa";
+  if (/^(5[1-5]|2[2-7])/.test(n)) return "Mastercard";
+  if (/^3[47]/.test(n)) return "Amex";
+  return "Card";
+}
+function pmAddSavedMethod(rec) {
+  const u = currentUser(); if (!u) return;
+  const list = pmMethods(u).slice();
+  rec.id = "pm_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  if (!list.length) rec.default = true; // first one becomes default
+  list.push(rec);
+  updateUser({ payMethods: list });
+  toast(t("paySaved"));
+}
+function pmRemoveSavedMethod(id) {
+  const u = currentUser(); if (!u) return;
+  let list = pmMethods(u).filter(m => m.id !== id);
+  if (list.length && !list.some(m => m.default)) list[0].default = true;
+  updateUser({ payMethods: list });
+  toast(t("payRemoved"));
+}
+function pmSetDefaultMethod(id) {
+  const u = currentUser(); if (!u) return;
+  const list = pmMethods(u).map(m => ({ ...m, default: m.id === id }));
+  updateUser({ payMethods: list });
+}
+function payMethodLabel(m) {
+  if (m.type === "paypal") return "🅿️ PayPal";
+  if (m.type === "cliq") return "🏦 CliQ · " + esc(m.alias || "");
+  return `💳 ${esc(m.brand || "Card")} •••• ${esc(m.last4 || "")}`;
+}
+
+/* ---------- "Payment methods" account section ---------- */
+function secPayMethods(u) {
+  if (payAdding) return payAddHTML(u);
+  const list = pmMethods(u);
+  const rows = list.map(m => `
+    <div class="pay-row">
+      <div class="pay-row-main">
+        <div class="pay-row-lbl">${payMethodLabel(m)} ${m.default ? `<span class="pill on">${t("payDefault")}</span>` : ""}</div>
+        ${m.exp ? `<div class="note" style="margin:2px 0 0">${t("payExpires")} ${esc(m.exp)}</div>` : ""}
+      </div>
+      <div class="pay-row-act">
+        ${m.default ? "" : `<button class="linkbtn" data-paydefault="${m.id}">${t("payMakeDefault")}</button>`}
+        <button class="linkbtn" style="color:#ef4444" data-payremove="${m.id}">${t("payRemove")}</button>
+      </div>
+    </div>`).join("");
+  return `
+  <h3>💳 ${t("payTitle")}</h3>
+  <div class="h-sub">${t("paySub")}</div>
+  ${list.length ? `<div class="pay-list">${rows}</div>` : `<div class="note" style="margin:14px 0">${t("payNone")}</div>`}
+  <button class="btn block" id="payAdd" style="margin-top:14px">➕ ${t("payAdd")}</button>
+  <div class="note">🔒 ${t("pmSecure")}</div>`;
+}
+
+function payAddHTML(u) {
+  const methods = [
+    ["card", "💳", t("pmPayCard"), t("pmPayCardSub")],
+    ["paypal", "🅿️", t("pmPayPaypal"), "PayPal"],
+    ["cliq", "🏦", t("pmPayCliq"), t("pmPayCliqSub")],
+  ].map(([m, icon, name, sub]) => `
+    <button type="button" class="pm-pay ${payAddMethod === m ? "on" : ""}" data-payam="${m}">
+      <span class="pm-pay-ic">${icon}</span>
+      <span class="pm-pay-txt"><b>${name}</b><small>${sub}</small></span>
+      <span class="pm-pay-dot"></span>
+    </button>`).join("");
+  const fields = payAddMethod === "card"
+    ? `<div class="pm-pay-form">
+        <input class="ob-input" id="payCardNum" inputmode="numeric" maxlength="23" placeholder="${t("pmCardNum")}">
+        <input class="ob-input" id="payCardName" placeholder="${t("payCardName")}">
+        <div class="pm-pay-row">
+          <input class="ob-input" id="payCardExp" inputmode="numeric" maxlength="7" placeholder="${t("pmCardExp")}">
+          <input class="ob-input" id="payCardCvc" inputmode="numeric" maxlength="4" placeholder="${t("pmCardCvc")}">
+        </div>
+      </div>`
+    : payAddMethod === "paypal"
+      ? `<div class="pm-pay-form"><div class="note" style="margin:0">🅿️ ${t("pmPaypalNote")}</div></div>`
+      : `<div class="pm-pay-form"><input class="ob-input" id="payCliqAlias" placeholder="${t("pmCliqAlias")}"></div>`;
+  return `
+  <button class="linkbtn" id="payBack" style="display:inline-block;margin:0 0 12px">‹ ${t("payTitle")}</button>
+  <h3>➕ ${t("payAdd")}</h3>
+  <div class="pm-pays" style="margin-top:8px">${methods}</div>
+  ${fields}
+  <div class="form-err" id="payErr" style="position:static;display:none;margin:8px 0 0"></div>
+  <button class="btn block" id="paySave" style="margin-top:14px">${t("paySave")}</button>
+  <button class="btn ghost block" id="payCancelAdd" style="margin-top:8px">${t("cancel")}</button>
+  <div class="note">🔒 ${t("pmSecure")}</div>`;
+}
+
+/* Build a saved-method record from the add form (storing only safe,
+   masked data — never the full card number or CVC). */
+function paySaveFromForm() {
+  if (payAddMethod === "card") {
+    const num = (document.getElementById("payCardNum")?.value || "").replace(/\s+/g, "");
+    const name = (document.getElementById("payCardName")?.value || "").trim();
+    const exp = (document.getElementById("payCardExp")?.value || "").trim();
+    const cvc = (document.getElementById("payCardCvc")?.value || "").trim();
+    if (!/^\d{13,19}$/.test(num) || !name || !/^\d{2}\s*\/?\s*\d{2}$/.test(exp) || !/^\d{3,4}$/.test(cvc)) return false;
+    pmAddSavedMethod({ type: "card", brand: cardBrand(num), last4: num.slice(-4), exp: exp.replace(/\s/g, ""), name });
+    return true;
+  }
+  if (payAddMethod === "cliq") {
+    const alias = (document.getElementById("payCliqAlias")?.value || "").trim();
+    if (alias.length < 3) return false;
+    pmAddSavedMethod({ type: "cliq", alias });
+    return true;
+  }
+  pmAddSavedMethod({ type: "paypal" }); // paypal: token would come from the redirect
+  return true;
+}
+
+/* ---------- payment-method events (routed from handlePremiumClick) ---------- */
+function handlePayMethodClick(e) {
+  const hit = (s) => e.target.closest(s);
+  if (hit("#payAdd")) { payAdding = true; payAddMethod = "card"; reRenderSection(); return true; }
+  if (hit("#payBack") || hit("#payCancelAdd")) { payAdding = false; reRenderSection(); return true; }
+  const am = hit("[data-payam]");
+  if (am) { payAddMethod = am.dataset.payam; reRenderSection(); return true; }
+  if (hit("#paySave")) {
+    if (!paySaveFromForm()) { const el = document.getElementById("payErr"); if (el) { el.textContent = t("pmPayErr"); el.style.display = "block"; } return true; }
+    payAdding = false; reRenderSection(); return true;
+  }
+  const rm = hit("[data-payremove]");
+  if (rm) { pmRemoveSavedMethod(rm.dataset.payremove); reRenderSection(); return true; }
+  const df = hit("[data-paydefault]");
+  if (df) { pmSetDefaultMethod(df.dataset.paydefault); reRenderSection(); return true; }
+  return false;
+}
+function resetPayMethods() { payAdding = false; payAddMethod = "card"; }
+
 /* Light input masking for the card fields (spaces every 4 digits,
    MM/YY expiry). Delegated so it survives re-renders. */
 document.addEventListener("input", (e) => {
   const el = e.target;
   if (!el || !el.id) return;
-  if (el.id === "pmCardNum") {
+  if (el.id === "pmCardNum" || el.id === "payCardNum") {
     el.value = el.value.replace(/\D/g, "").slice(0, 19).replace(/(.{4})/g, "$1 ").trim();
-  } else if (el.id === "pmCardExp") {
+  } else if (el.id === "pmCardExp" || el.id === "payCardExp") {
     let v = el.value.replace(/\D/g, "").slice(0, 4);
     el.value = v.length >= 3 ? v.slice(0, 2) + " / " + v.slice(2) : v;
-  } else if (el.id === "pmCardCvc" || el.id === "pmCardNum") {
+  } else if (el.id === "pmCardCvc" || el.id === "payCardCvc") {
     el.value = el.value.replace(/\D/g, "");
   }
 });

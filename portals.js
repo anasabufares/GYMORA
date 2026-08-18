@@ -132,6 +132,7 @@ function navForRole(u) {
   return [
     ["profile", "👤", t("myProfile")], msg, tickets, news, ["plan", "🎯", t("myPlan")],
     ["premium", "⭐", t("pmTab")],
+    ["paymethods", "💳", t("payTab")],
     ["workouts", "📋", t("workouts")], ["library", "📚", t("libTitle")],
     ["classes", "🗓️", t("clsTab")], ["progress", "📈", t("myProgress")],
     ["points", "🏅", t("pointsRewards")], ["inbody", "🧬", t("inbodyScan")],
