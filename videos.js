@@ -200,6 +200,12 @@ document.addEventListener("click", (e) => {
     if (typeof pmOpenSubscription === "function") pmOpenSubscription();
     return;
   }
+  // [data-vidlock] is a locked exercise with no playable in-app video —
+  // it exists only to open the paywall.
+  const lock = e.target.closest("[data-vidlock]");
+  if (lock && !e.target.closest("[data-localvideo],[data-video]")) {
+    e.preventDefault(); openVideoPaywall(lock.dataset.vtitle || ""); return;
+  }
   const media = e.target.closest("[data-localvideo],[data-video]");
   if (!media) return;
   const exn = media.dataset.exn || media.dataset.vtitle || "";
