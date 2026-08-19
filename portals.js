@@ -48,6 +48,7 @@ const PORTAL_I18N = {
     banUser: "Suspend a user", giveaway: "Run a giveaway", giveawayRun: "Pick a winner", winner: "🎉 Winner:",
     freeStuff: "Grant free stuff", grantFree: "Grant 1-month free (demo)", granted: "Granted (demo)",
     totalUsers: "Total users", byRole: "By role", noUsers: "No matching users.",
+    adminTickets: "Support tickets", adminOpenTickets: "open", adminAnswerTickets: "Open the tickets queue to answer", adminNoOpen: "No open tickets right now 🎉",
   },
   ar: {
     roleMember: "عضو", roleCoach: "مدرّب", roleStaff: "موظّف نادٍ", roleOwner: "صاحب نادٍ", roleAdmin: "مشرف",
@@ -85,6 +86,7 @@ const PORTAL_I18N = {
     banUser: "إيقاف مستخدم", giveaway: "سحب جائزة", giveawayRun: "اختر فائزاً", winner: "🎉 الفائز:",
     freeStuff: "منح هدايا مجانية", grantFree: "منح شهر مجاني (تجريبي)", granted: "تم المنح (تجريبي)",
     totalUsers: "إجمالي المستخدمين", byRole: "حسب الدور", noUsers: "لا مستخدمين مطابقين.",
+    adminTickets: "طلبات الدعم", adminOpenTickets: "مفتوحة", adminAnswerTickets: "افتح قائمة الطلبات للرد", adminNoOpen: "لا توجد طلبات مفتوحة الآن 🎉",
   },
 };
 Object.assign(I18N.en, PORTAL_I18N.en);
@@ -328,6 +330,7 @@ function secOwner(u) {
     <button class="btn ghost" id="portalMsgs">💬 ${t("msgTab")}</button>
     <button class="btn ghost" id="tkGoTickets">🎫 ${t("tkQueue")}</button>
   </div>
+  ${supportPanelHTML(u)}
   <div class="stat-row">
     <div class="stat"><div class="n" style="color:var(--accent)">${head}</div><div class="l">${t("inGymNow")}</div></div>
     <div class="stat"><div class="n">${members.length}</div><div class="l">${t("totalSubs")}</div></div>
@@ -449,6 +452,7 @@ function secStaff(u) {
     <button class="btn ghost" id="portalMsgs">💬 ${t("msgTab")}</button>
     <button class="btn ghost" id="tkGoTickets">🎫 ${t("tkQueue")}</button>
   </div>
+  ${supportPanelHTML(u)}
   <div class="note" style="margin-bottom:12px">🪪 ${t("staffRoleLabel")}: <b>${staffRoleName(u.staffRole) || t("noRoleYet")}</b> · ${ownerGym(u).name[state.lang]}</div>
   <div class="stat-row">
     <div class="stat"><div class="n">${18 + (new Date().getHours())}</div><div class="l">${t("checkinsToday")}</div></div>
@@ -471,6 +475,28 @@ function secStaff(u) {
 }
 
 /* ---------- admin portal ---------- */
+/* Support dashboard panel — ticket stats + quick-answer list. Shown in
+   the admin (and staff/owner) portals so the team can answer members. */
+function supportPanelHTML(u) {
+  const c = typeof tkCounts === "function" ? tkCounts(u) : { open: 0, answered: 0, closed: 0, total: 0 };
+  const recent = typeof tkRecentOpen === "function" ? tkRecentOpen(u, 5) : [];
+  const rows = recent.length
+    ? recent.map(x => `<button class="kv sup-row" data-supticket="${esc(x.id)}" style="width:100%;text-align:start;border:none;background:none;cursor:pointer">
+        <span>🎫 ${esc((x.subject || t("tkTitle")).slice(0, 40))}<br><small style="color:var(--muted)">${esc(x.byName || x.by || "")}</small></span>
+        <span style="color:var(--accent)">${t("tkReply")} ›</span></button>`).join("")
+    : `<div class="note">${t("adminNoOpen")}</div>`;
+  return `
+  <div class="section" style="border:1px solid color-mix(in srgb, var(--accent) 35%, var(--border))">
+    <h4>🎧 ${t("adminTickets")}</h4>
+    <div class="stat-row">
+      <div class="stat"><div class="n" style="color:#ef4444">${c.open}</div><div class="l">${t("tkOpen")}</div></div>
+      <div class="stat"><div class="n">${c.answered}</div><div class="l">${t("tkAnswered")}</div></div>
+      <div class="stat"><div class="n">${c.closed}</div><div class="l">${t("tkClosed")}</div></div>
+    </div>
+    <div class="sup-list" style="margin:10px 0">${rows}</div>
+    <button class="btn block" id="adminOpenTickets">🎫 ${t("adminAnswerTickets")}${c.open ? ` (${c.open} ${t("adminOpenTickets")})` : ""}</button>
+  </div>`;
+}
 function secAdmin(u) {
   const users = getUsers();
   const counts = ROLES.map(r => `${roleLabel(r)}: ${users.filter(x => (x.role || "user") === r).length}`).join(" · ");
@@ -483,6 +509,7 @@ function secAdmin(u) {
   </div>
   <div class="note">${t("byRole")}: ${counts}</div>
   <button class="btn ghost" id="portalMsgs" style="margin:12px 0">💬 ${t("msgTab")}</button>
+  ${supportPanelHTML(u)}
   ${typeof noticeComposeHTML === "function" ? noticeComposeHTML("admin") : ""}
   <div class="section">
     <h4>⛔ ${t("banUser")}</h4>
@@ -530,6 +557,9 @@ function handlePortalClick(e) {
     return true;
   }
   if (hit("#portalMsgs") && typeof gotoMsgSection === "function") { gotoMsgSection(); return true; }
+  if (hit("#adminOpenTickets") && typeof gotoTickets === "function") { gotoTickets(); return true; }
+  const supt = hit("[data-supticket]");
+  if (supt && typeof gotoTicket === "function") { gotoTicket(supt.dataset.supticket); return true; }
   if (hit("#coachBack")) { coachSel = null; reRenderSection(); return true; }
   const oteam = hit("[data-oteam]"); if (oteam) { ownerTab = oteam.dataset.oteam; reRenderSection(); return true; }
   const alert = hit("[data-alert]"); if (alert) { toast(t("alerted")); return true; }
