@@ -61,14 +61,14 @@ const POLICY_SECTIONS = {
     ["🔒 Privacy Policy — what we collect", [
       "**Account details:** your name, email, password (stored in a hashed form, never in plain text), age, and — for coaches, staff and gym owners — your phone number and gym.",
       "**Health & fitness data:** your gender, height, weight, goal weight and fitness goal, plus anything you log — workouts and sets, meals and calories, water, supplements, body-composition (InBody) scans, progress, points and class bookings. This is the core data that lets us build your plan.",
-      "**Food photos:** if you use the food scanner, the photo you take is sent to our AI provider, Anthropic (the makers of Claude), which identifies the food and estimates its nutrition. The photo is used only to answer that request and is not used to train AI models. We don't keep the raw photo after it's analysed.",
+      "**Food photos:** if you use the food scanner, the photo you take is sent to a trusted third-party AI service that identifies the food and estimates its nutrition. The photo is used only to answer that request and is not used to train AI models. We don't keep the raw photo after it's analysed.",
       "**Payment information:** when you save a payment method we store only safe, masked details — the card type/brand, the last 4 digits and the expiry date, or a wallet identifier (your CliQ alias or that you chose PayPal). GYMORA never stores your full card number or CVC. Real charges are handled by a licensed payment processor, not by GYMORA.",
       "**Technical data:** a device identifier and a login token stored in your browser, plus basic security logs (such as IP address and device/browser type) kept by our hosting provider to protect the service.",
     ]],
     ["🔒 Privacy Policy — how we use & share it", [
       "**How we use it.** To create and run your plan, track your progress, manage your subscription, provide support, keep the service secure, prevent fraud, and meet legal obligations.",
       "**We do not sell your data.** Ever.",
-      "**Who we share it with — only these:** our hosting provider (Netlify) and database provider (MongoDB) to store your data; Anthropic to analyse food photos you submit; a licensed payment processor to take payments; and — only if you join a gym — that gym and your assigned coach, so they can support you. We may also disclose data if the law requires it.",
+      "**Who we share it with — only these:** trusted hosting and database service providers to store your data; a third-party AI service to analyse food photos you submit; a licensed payment processor to take payments; and — only if you join a gym — that gym and your assigned coach, so they can support you. We may also disclose data if the law requires it.",
       "**Retention.** We keep your data while your account is active. When you delete your account we remove your personal data, except the minimum we must keep for legal, accounting or fraud-prevention reasons.",
       "**Your rights.** You can view and edit most of your data in the app. You can ask us to correct it, export it, or delete it, and you can withdraw consent, by contacting " + POLICY_CONTACT + ".",
       "**Security.** We protect your data with encryption in transit, hashed passwords, and encrypted storage of sensitive records. No system is 100% secure, but we work to keep yours safe.",
@@ -100,14 +100,14 @@ const POLICY_SECTIONS = {
     ["🔒 سياسة الخصوصية — ما الذي نجمعه", [
       "**بيانات الحساب:** اسمك، بريدك، كلمة المرور (تُخزّن مُشفّرة وليست نصاً صريحاً)، عمرك — وللمدربين والموظفين وأصحاب النوادي: رقم هاتفك والنادي.",
       "**بيانات الصحة واللياقة:** جنسك، طولك، وزنك، وزنك المستهدف وهدفك، وكل ما تسجّله من تمارين ووجبات وسعرات وماء ومكملات وفحوصات تكوين الجسم (InBody) وتقدّم ونقاط وحجوزات حصص. هذه البيانات أساس بناء خطتك.",
-      "**صور الطعام:** عند استخدام ماسح الطعام، تُرسَل الصورة إلى مزوّد الذكاء الاصطناعي Anthropic (صانعو Claude) للتعرّف على الطعام وتقدير قيمته الغذائية. تُستخدم الصورة لهذا الطلب فقط ولا تُستخدم لتدريب النماذج، ولا نحتفظ بالصورة بعد تحليلها.",
+      "**صور الطعام:** عند استخدام ماسح الطعام، تُرسَل الصورة إلى خدمة ذكاء اصطناعي موثوقة من طرف ثالث للتعرّف على الطعام وتقدير قيمته الغذائية. تُستخدم الصورة لهذا الطلب فقط ولا تُستخدم لتدريب النماذج، ولا نحتفظ بالصورة بعد تحليلها.",
       "**معلومات الدفع:** عند حفظ طريقة دفع نخزّن بيانات مقنّعة وآمنة فقط — نوع البطاقة وآخر 4 أرقام وتاريخ الانتهاء، أو معرّف محفظة (اسم كليك المستعار أو اختيارك PayPal). لا تخزّن GYMORA رقم بطاقتك الكامل أو الـ CVC أبداً، وتتم عمليات الدفع الفعلية عبر مزوّد دفع مرخّص.",
       "**بيانات تقنية:** معرّف جهاز ورمز تسجيل دخول يُحفظ في متصفحك، وسجلّات أمان أساسية (مثل عنوان IP ونوع الجهاز/المتصفح) يحتفظ بها مزوّد الاستضافة لحماية الخدمة.",
     ]],
     ["🔒 سياسة الخصوصية — كيف نستخدمها ونشاركها", [
       "**الاستخدام.** لإنشاء خطتك وتشغيلها، وتتبّع تقدّمك، وإدارة اشتراكك، وتقديم الدعم، وحماية الخدمة، ومنع الاحتيال، والوفاء بالالتزامات القانونية.",
       "**لا نبيع بياناتك.** إطلاقاً.",
-      "**مع من نشاركها — هؤلاء فقط:** مزوّد الاستضافة (Netlify) وقاعدة البيانات (MongoDB) لتخزين بياناتك؛ وAnthropic لتحليل صور الطعام؛ ومزوّد دفع مرخّص لتحصيل المدفوعات؛ وعند انضمامك لنادٍ فقط: ذلك النادي ومدرّبك المخصّص. وقد نُفصح عند طلب القانون.",
+      "**مع من نشاركها — هؤلاء فقط:** مزوّدو خدمات استضافة وقواعد بيانات موثوقون لتخزين بياناتك؛ وخدمة ذكاء اصطناعي من طرف ثالث لتحليل صور الطعام؛ ومزوّد دفع مرخّص لتحصيل المدفوعات؛ وعند انضمامك لنادٍ فقط: ذلك النادي ومدرّبك المخصّص. وقد نُفصح عند طلب القانون.",
       "**الاحتفاظ.** نحتفظ ببياناتك ما دام حسابك نشطاً، وعند حذفه نزيل بياناتك الشخصية عدا الحد الأدنى المطلوب لأسباب قانونية أو محاسبية أو لمنع الاحتيال.",
       "**حقوقك.** يمكنك عرض وتعديل معظم بياناتك داخل التطبيق، وطلب تصحيحها أو تصديرها أو حذفها وسحب موافقتك عبر مراسلتنا على " + POLICY_CONTACT + ".",
       "**الأمان.** نحمي بياناتك بالتشفير أثناء النقل، وكلمات مرور مُشفّرة، وتخزين مُشفّر للسجلات الحساسة. لا يوجد نظام آمن 100% لكننا نعمل على حماية بياناتك.",
