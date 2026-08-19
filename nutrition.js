@@ -60,6 +60,14 @@ const NUT_I18N = {
     ctFailedTitle: "Couldn't identify this photo",
     ctFailedBody: "Photo AI isn't available right now. Search the food by name or scan its barcode below.",
     ctTryAgain: "Try another photo",
+    npTitle: "Add this product",
+    npSub: "This barcode isn't in the database yet. Add it once — we'll remember it next time you scan.",
+    npName: "Product name",
+    npKcal: "Calories per 100 g",
+    npSave: "Save & log",
+    ctSaved: "Saved — we'll remember this barcode ✅",
+    ctPayErrName: "Enter at least a name and calories.",
+    npBarcode: "Barcode",
   },
   ar: {
     calorieTracker: "حاسبة السعرات",
@@ -101,6 +109,14 @@ const NUT_I18N = {
     ctFailedTitle: "تعذّر التعرف على الصورة",
     ctFailedBody: "تحليل الصور بالذكاء الاصطناعي غير متاح حالياً. ابحث عن الطعام بالاسم أو امسح الباركود بالأسفل.",
     ctTryAgain: "جرّب صورة أخرى",
+    npTitle: "أضِف هذا المنتج",
+    npSub: "هذا الباركود غير موجود في قاعدة البيانات بعد. أضِفه مرة واحدة وسنتذكّره في المسح القادم.",
+    npName: "اسم المنتج",
+    npKcal: "السعرات لكل 100 غ",
+    npSave: "احفظ وسجّل",
+    ctSaved: "تم الحفظ — سنتذكّر هذا الباركود ✅",
+    ctPayErrName: "أدخل الاسم والسعرات على الأقل.",
+    npBarcode: "الباركود",
   },
 };
 Object.assign(I18N.en, NUT_I18N.en);
@@ -380,16 +396,32 @@ async function offSearch(query) {
 async function offByBarcode(code) {
   const c = String(code || "").replace(/\D/g, "");
   if (!c) return null;
-  const r = await fetch(OFF_ORIGIN + "/api/v0/product/" + c + ".json", { headers: { Accept: "application/json" } });
-  if (!r.ok) return null;
-  const data = await r.json();
-  return data.status === 1 ? offToFood(data.product) : null;
+  const cached = barcodeCacheGet(c);     // user-added / previously-scanned products
+  if (cached) { OFF_BASE[cached.key] = [cached.base || 100, cached.baseUnit || "g"]; if (!offFoods.some(x => x.key === cached.key)) offFoods.push(cached); return cached; }
+  try {
+    const r = await fetch(OFF_ORIGIN + "/api/v0/product/" + c + ".json", { headers: { Accept: "application/json" } });
+    if (!r.ok) return null;
+    const data = await r.json();
+    return data.status === 1 ? offToFood(data.product) : null;
+  } catch (e) { return null; }
+}
+
+/* ---------- local barcode memory ----------
+   Any barcode the user adds by hand (because it isn't in Open Food
+   Facts) is remembered here, so scanning it again auto-fills. Shared
+   across the account on this device. */
+const BARCODE_STORE = "gym_barcodes";
+function barcodeCacheAll() { try { return JSON.parse(localStorage.getItem(BARCODE_STORE) || "{}") || {}; } catch (e) { return {}; } }
+function barcodeCacheGet(code) { const f = barcodeCacheAll()[String(code)]; return f || null; }
+function barcodeCacheSet(code, food) {
+  const all = barcodeCacheAll(); all[String(code)] = food;
+  try { localStorage.setItem(BARCODE_STORE, JSON.stringify(all)); } catch (e) {}
 }
 
 /* ---------- transient scan state (not persisted) ---------- */
 let nScan = { status: "idle", previewURL: null, base: null, amount: 0, unit: "g", baseAmt: 250, baseUnit: "g" };
 let nQuery = "";
-function resetNutrition() { nScan = { status: "idle", previewURL: null, base: null, amount: 0, unit: "g", baseAmt: 250, baseUnit: "g" }; nQuery = ""; nOffResults = []; nOffStatus = "idle"; }
+function resetNutrition() { nScan = { status: "idle", previewURL: null, base: null, amount: 0, unit: "g", baseAmt: 250, baseUnit: "g" }; nQuery = ""; nOffResults = []; nOffStatus = "idle"; nNewBarcode = null; }
 function setScanFood(base, previewURL) {
   const [amt, unit] = foodBase(base.key);
   nScan = { status: "result", previewURL: previewURL || null, base, amount: amt, unit, baseAmt: amt, baseUnit: unit };
@@ -560,6 +592,25 @@ function scannerHTML() {
       </div>
     </div>`;
   }
+  if (nScan.status === "newproduct") {
+    return `<div class="section ct-scan">
+      <div class="ct-detected">🆕 <b>${t("npTitle")}</b></div>
+      <div class="note" style="margin:4px 0 10px">${t("npSub")}</div>
+      ${nNewBarcode ? `<div class="kv"><span>${t("npBarcode")}</span><span><b>${esc(nNewBarcode)}</b></span></div>` : ""}
+      <div class="pm-pay-form" style="margin-top:10px">
+        <input class="ob-input" id="npName" placeholder="${t("npName")}">
+        <input class="ob-input" id="npKcal" inputmode="numeric" placeholder="${t("npKcal")}">
+        <div class="pm-pay-row" style="grid-template-columns:1fr 1fr 1fr">
+          <input class="ob-input" id="npP" inputmode="numeric" placeholder="${t("protein")} (g)">
+          <input class="ob-input" id="npC" inputmode="numeric" placeholder="${t("carbs")} (g)">
+          <input class="ob-input" id="npF" inputmode="numeric" placeholder="${t("fat")} (g)">
+        </div>
+      </div>
+      <div class="form-err" id="npErr" style="position:static;display:none;margin:8px 0 0"></div>
+      <button class="btn block" id="npSave" style="margin-top:12px">${t("npSave")}</button>
+      <button class="btn ghost block" id="npCancel" style="margin-top:8px">${t("ctDiscard")}</button>
+    </div>`;
+  }
   if (nScan.status === "failed") {
     return `<div class="section ct-scan">
       ${nScan.previewURL ? `<div class="ct-preview sm"><img src="${nScan.previewURL}" alt=""></div>` : ""}
@@ -655,6 +706,8 @@ function handleFoodClick(e) {
     return true;
   }
   if (hit("#ctBarcode")) { startBarcodeScan(); return true; }
+  if (hit("#npSave")) { saveNewProduct(); return true; }
+  if (hit("#npCancel")) { nNewBarcode = null; resetNutrition(); reRenderSection(); return true; }
   if (hit("#foodAdd")) { foodAdd(); return true; }
   if (hit("#foodDiscard")) { resetNutrition(); reRenderSection(); return true; }
   const df = hit("[data-delfood]"); if (df) { foodRemove(df.dataset.delfood); return true; }
@@ -750,14 +803,40 @@ function queueOffSearch(query) {
 }
 
 /* ---------- barcode scanning ---------- */
+let nNewBarcode = null; // barcode being added by hand (not found online)
 async function lookupBarcode(code) {
+  const c = String(code || "").replace(/\D/g, "");
   nScan = { status: "analyzing", previewURL: null, base: null, amount: 0, unit: "g", baseAmt: 100, baseUnit: "g" };
   reRenderSection();
-  try {
-    const food = await offByBarcode(code);
-    if (food) { setScanFood(toBase(food)); reRenderSection(); }
-    else { resetNutrition(); reRenderSection(); toast(t("ctNotFound")); }
-  } catch (e) { resetNutrition(); reRenderSection(); toast(t("ctNotFound")); }
+  let food = null;
+  try { food = await offByBarcode(c); } catch (e) { food = null; }
+  if (food) { setScanFood(toBase(food)); reRenderSection(); }
+  else {
+    // not in the database — let the user add it once; we'll remember it
+    nNewBarcode = c;
+    nScan = { status: "newproduct", previewURL: null, base: null, amount: 0, unit: "g", baseAmt: 100, baseUnit: "g" };
+    reRenderSection();
+  }
+}
+/* Save a user-entered product for its barcode, then log it. */
+function saveNewProduct() {
+  const nm = (document.getElementById("npName")?.value || "").trim();
+  const kcal = parseFloat(document.getElementById("npKcal")?.value || "");
+  if (!nm || !(kcal >= 0)) { const e = document.getElementById("npErr"); if (e) { e.textContent = t("ctPayErrName"); e.style.display = "block"; } return; }
+  const p = parseFloat(document.getElementById("npP")?.value || "") || 0;
+  const c = parseFloat(document.getElementById("npC")?.value || "") || 0;
+  const f = parseFloat(document.getElementById("npF")?.value || "") || 0;
+  const key = "off_" + (nNewBarcode || Date.now());
+  const food = { key, emoji: "🍽️", off: true, base: 100, baseUnit: "g",
+    name: { en: nm, ar: nm }, serving: { en: t("ctPer100"), ar: t("ctPer100") },
+    kcal: Math.round(kcal), p: Math.round(p), c: Math.round(c), f: Math.round(f) };
+  OFF_BASE[key] = [100, "g"];
+  if (!offFoods.some(x => x.key === key)) offFoods.push(food);
+  if (nNewBarcode) barcodeCacheSet(nNewBarcode, food); // remembered for next scan
+  nNewBarcode = null;
+  setScanFood(toBase(food));
+  reRenderSection();
+  toast(t("ctSaved"));
 }
 function barcodeManual() {
   const code = window.prompt(t("ctBarcodePrompt"));
