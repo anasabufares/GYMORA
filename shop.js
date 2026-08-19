@@ -81,7 +81,8 @@ function secSupps(u) {
         <button class="btn" data-addsupp="${it.key}">${shopCart[it.key] ? t("inCartN").replace("{n}", shopCart[it.key]) : t("addCart")}</button>
       </div>`).join("")}
   </div>
-  ${cart}`;
+  ${cart}
+  <div class="note supp-warn">⚠️ ${t("suppDisclaimer")}</div>`;
 }
 
 function handleShopClick(e) {

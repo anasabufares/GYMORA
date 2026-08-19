@@ -31,7 +31,13 @@ const PLAN_I18N = {
     mealPlan: "Meal plan (sample day)", kcal: "kcal",
     mealNote: "Portions scale to hit your daily calories. Prioritise protein and whole foods.",
     dietSwapNote: "Swap animal proteins for tofu, legumes and lentils.",
-    supplements: "Suggested supplements", suppDisclaimer: "Talk to a doctor before starting any supplement.",
+    supplements: "Suggested supplements", suppDisclaimer: "Suggestions only — not medical advice. Ask a doctor or pharmacist before using any suggested supplement. You use them entirely at your own risk, and GYMORA accepts no responsibility or liability for any use.",
+    foodFocus: "Foods to prioritise",
+    food_lose: "Lean protein (chicken, fish, eggs, yogurt), lots of vegetables, and high-fibre carbs. Keep portions and oils in check.",
+    food_build: "Plenty of protein at every meal, rice/oats/potatoes around training, and healthy fats. Eat in a small surplus.",
+    food_gain: "Calorie-dense whole foods — rice, pasta, nut butters, whole milk, dried fruit — plus a protein shake or two to top up.",
+    food_recomp: "High protein, most carbs around your workout, and plenty of vegetables. Eat near maintenance.",
+    food_fit: "Balanced whole foods — protein, whole grains, fruits, vegetables and healthy fats. Stay hydrated.",
     reminders: "Reminders", gymReminder: "Gym reminder", restReminder: "Rest-day reminder", testReminder: "Test",
     remGymMsg: "🏋️ Time to train — head to the gym!", remRestMsg: "😴 Rest day — recover, stretch and hydrate.",
     remNote: "Reminders show while the app is open (plus a desktop notification if you allow it). Always-on push arrives with the backend.",
@@ -71,7 +77,13 @@ const PLAN_I18N = {
     mealPlan: "خطة الوجبات (يوم نموذجي)", kcal: "سعرة",
     mealNote: "تُعدّل الكميات لبلوغ سعراتك اليومية. أعطِ الأولوية للبروتين والأطعمة الكاملة.",
     dietSwapNote: "استبدل البروتين الحيواني بالتوفو والبقوليات والعدس.",
-    supplements: "مكملات مقترحة", suppDisclaimer: "استشر الطبيب قبل البدء بأي مكمل.",
+    supplements: "مكملات مقترحة", suppDisclaimer: "اقتراحات فقط — وليست نصيحة طبية. استشر طبيباً أو صيدلانياً قبل استخدام أي مكمل مقترح. أنت تستخدمها على مسؤوليتك الكاملة، ولا تتحمّل GYMORA أي مسؤولية أو التزام عن أي استخدام.",
+    foodFocus: "أطعمة يُنصح بإعطائها الأولوية",
+    food_lose: "بروتين قليل الدهن (دجاج، سمك، بيض، زبادي)، الكثير من الخضار، وكربوهيدرات غنية بالألياف. انتبه للكميات والزيوت.",
+    food_build: "بروتين وافر في كل وجبة، أرز/شوفان/بطاطا حول التمرين، ودهون صحية. كُل بفائض بسيط.",
+    food_gain: "أطعمة كاملة عالية السعرات — أرز، معكرونة، زبدة مكسرات، حليب كامل، فواكه مجففة — مع شيك بروتين أو اثنين.",
+    food_recomp: "بروتين عالٍ، ومعظم الكربوهيدرات حول التمرين، والكثير من الخضار. كُل قرب مستوى الثبات.",
+    food_fit: "أطعمة كاملة متوازنة — بروتين، حبوب كاملة، فواكه، خضار ودهون صحية. حافظ على شرب الماء.",
     reminders: "التذكيرات", gymReminder: "تذكير النادي", restReminder: "تذكير يوم الراحة", testReminder: "تجربة",
     remGymMsg: "🏋️ وقت التمرين — توجّه إلى النادي!", remRestMsg: "😴 يوم راحة — تعافَ ومدّد واشرب الماء.",
     remNote: "تظهر التذكيرات أثناء فتح التطبيق (مع إشعار سطح المكتب إن سمحت). الإشعارات الدائمة تأتي مع الخادم.",
@@ -159,6 +171,32 @@ const MEALS = [
   { slot: { en: "Pre-workout", ar: "قبل التمرين" }, items: { en: "Fruit & a coffee", ar: "فاكهة وقهوة" }, kcal: 150 },
   { slot: { en: "Dinner", ar: "العشاء" }, items: { en: "Salmon or lean beef, potato & veggies", ar: "سلمون أو لحم قليل الدهن، بطاطا وخضار" }, kcal: 550 },
 ];
+
+/* Goal-tuned sample meal day. Portions still scale to the user's daily
+   calorie target (see mealNote); this shapes the food choices. */
+const MEALS_GOAL = {
+  lose: [
+    { slot: { en: "Breakfast", ar: "الفطور" }, items: { en: "3-egg omelette, veggies & labneh", ar: "عجة 3 بيضات مع خضار ولبنة" }, kcal: 320 },
+    { slot: { en: "Snack", ar: "وجبة خفيفة" }, items: { en: "Greek yogurt & berries", ar: "زبادي يوناني وتوت" }, kcal: 180 },
+    { slot: { en: "Lunch", ar: "الغداء" }, items: { en: "Grilled chicken, big salad & a little rice", ar: "دجاج مشوي، سلطة كبيرة وقليل رز" }, kcal: 480 },
+    { slot: { en: "Dinner", ar: "العشاء" }, items: { en: "White fish or lean beef & vegetables", ar: "سمك أبيض أو لحم قليل الدهن وخضار" }, kcal: 420 },
+  ],
+  gain: [
+    { slot: { en: "Breakfast", ar: "الفطور" }, items: { en: "Oats with milk, banana, peanut butter & 3 eggs", ar: "شوفان بالحليب، موز، زبدة فول سوداني و3 بيضات" }, kcal: 650 },
+    { slot: { en: "Snack", ar: "وجبة خفيفة" }, items: { en: "Protein shake, dates & nuts", ar: "شيك بروتين، تمر ومكسرات" }, kcal: 400 },
+    { slot: { en: "Lunch", ar: "الغداء" }, items: { en: "Chicken, rice & avocado", ar: "دجاج، رز وأفوكادو" }, kcal: 750 },
+    { slot: { en: "Dinner", ar: "العشاء" }, items: { en: "Beef or salmon, pasta & olive oil", ar: "لحم أو سلمون، معكرونة وزيت زيتون" }, kcal: 700 },
+  ],
+  build: [
+    { slot: { en: "Breakfast", ar: "الفطور" }, items: { en: "Oats, 3 eggs, banana & yogurt", ar: "شوفان، 3 بيضات، موز وزبادي" }, kcal: 500 },
+    { slot: { en: "Snack", ar: "وجبة خفيفة" }, items: { en: "Greek yogurt & almonds", ar: "زبادي يوناني ولوز" }, kcal: 240 },
+    { slot: { en: "Lunch", ar: "الغداء" }, items: { en: "Chicken, rice & vegetables", ar: "دجاج، رز وخضار" }, kcal: 650 },
+    { slot: { en: "Post-workout", ar: "بعد التمرين" }, items: { en: "Whey shake & a banana", ar: "شيك واي وموزة" }, kcal: 260 },
+    { slot: { en: "Dinner", ar: "العشاء" }, items: { en: "Lean beef or salmon, potato & veggies", ar: "لحم قليل الدهن أو سلمون، بطاطا وخضار" }, kcal: 600 },
+  ],
+};
+MEALS_GOAL.recomp = MEALS_GOAL.build;
+function mealsFor(goal) { return MEALS_GOAL[goal] || MEALS; }
 
 const SUPP = {
   multi: { name: { en: "Multivitamin", ar: "مالتي فيتامين" }, note: { en: "Covers daily micronutrient gaps.", ar: "يسدّ نقص الفيتامينات اليومية." } },
@@ -323,14 +361,15 @@ function planViewHTML(u) {
 
   <div class="section">
     <h4>🍽️ ${t("mealPlan")}</h4>
-    ${MEALS.map(m => `<div class="meal-row"><div><b>${m.slot[state.lang]}</b><div class="meal-items">${m.items[state.lang]}</div></div><span class="meal-kcal">${m.kcal} ${t("kcal")}</span></div>`).join("")}
+    <div class="kv" style="align-items:flex-start"><span>🥗 ${t("foodFocus")}</span><span style="text-align:end;max-width:62%">${t("food_" + (["lose","build","gain","recomp","fit"].includes(inx.goal) ? inx.goal : "fit"))}</span></div>
+    ${mealsFor(inx.goal).map(m => `<div class="meal-row"><div><b>${m.slot[state.lang]}</b><div class="meal-items">${m.items[state.lang]}</div></div><span class="meal-kcal">${m.kcal} ${t("kcal")}</span></div>`).join("")}
     <div class="note">${t("mealNote")}${dietNote}</div>
   </div>
 
   <div class="section">
     <h4>💊 ${t("supplements")}</h4>
     ${suppsFor(inx.goal).map(s => `<div class="supp-row"><b>${s.name[state.lang]}</b><span>${s.note[state.lang]}</span></div>`).join("")}
-    <div class="note">⚠️ ${t("suppDisclaimer")}</div>
+    <div class="note supp-warn">⚠️ ${t("suppDisclaimer")}</div>
   </div>
 
   <div class="section">
