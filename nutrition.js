@@ -47,7 +47,7 @@ const NUT_I18N = {
     ctByPhoto: "📷 Add by photo (auto-guesses the food)",
     ctNoMatch: "No match. Try another word, or add by photo.",
     ctPickTitle: "What did you eat?",
-    ctDemoNote: "Pick what you ate from the list, or add by photo. Photo guessing uses a built-in library in demo mode; real photo AI turns on when connected to the cloud (see AI-SETUP).",
+    ctDemoNote: "Search any food (millions online), scan a barcode, or snap a photo. Photo recognition uses AI — set ANTHROPIC_API_KEY in Netlify to turn it on (see AI-SETUP); until then, use search or barcode.",
     ctOnline: "More results online",
     ctSearching: "Searching millions of foods…",
     ctScanBarcode: "Scan barcode",
@@ -57,6 +57,9 @@ const NUT_I18N = {
     ctPer100: "per 100 g",
     ctOffCredit: "Online food data from Open Food Facts",
     ctCamDenied: "Camera unavailable — enter the barcode number instead.",
+    ctFailedTitle: "Couldn't identify this photo",
+    ctFailedBody: "Photo AI isn't available right now. Search the food by name or scan its barcode below.",
+    ctTryAgain: "Try another photo",
   },
   ar: {
     calorieTracker: "حاسبة السعرات",
@@ -85,7 +88,7 @@ const NUT_I18N = {
     ctByPhoto: "📷 أضف بصورة (تخمين تلقائي للطعام)",
     ctNoMatch: "لا نتائج. جرّب كلمة أخرى أو أضف بصورة.",
     ctPickTitle: "ماذا أكلت؟",
-    ctDemoNote: "اختر ما أكلته من القائمة أو أضف بصورة. تخمين الصورة يستخدم مكتبة مدمجة في الوضع التجريبي؛ يعمل تحليل الصور بالذكاء الاصطناعي عند الربط بالسحابة (راجع AI-SETUP).",
+    ctDemoNote: "ابحث عن أي طعام (ملايين عبر الإنترنت)، أو امسح باركود، أو التقط صورة. التعرف بالصورة يعمل بالذكاء الاصطناعي — فعّل ANTHROPIC_API_KEY في Netlify لتشغيله (راجع AI-SETUP)؛ حتى ذلك استخدم البحث أو الباركود.",
     ctOnline: "نتائج إضافية عبر الإنترنت",
     ctSearching: "نبحث في ملايين الأطعمة…",
     ctScanBarcode: "مسح الباركود",
@@ -95,6 +98,9 @@ const NUT_I18N = {
     ctPer100: "لكل 100 غ",
     ctOffCredit: "بيانات الأطعمة عبر الإنترنت من Open Food Facts",
     ctCamDenied: "الكاميرا غير متاحة — أدخل رقم الباركود يدوياً.",
+    ctFailedTitle: "تعذّر التعرف على الصورة",
+    ctFailedBody: "تحليل الصور بالذكاء الاصطناعي غير متاح حالياً. ابحث عن الطعام بالاسم أو امسح الباركود بالأسفل.",
+    ctTryAgain: "جرّب صورة أخرى",
   },
 };
 Object.assign(I18N.en, NUT_I18N.en);
@@ -445,17 +451,6 @@ function foodResultsHTML() {
 function fileToBase64(file) {
   return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(file); });
 }
-function demoPick(file) {
-  let h = 0; const s = (file.name || "") + "|" + file.size + "|" + (file.lastModified || 0);
-  for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return { food: FOODS[h % FOODS.length], conf: 78 + (h % 19) };
-}
-function demoAnalyze(file) {
-  return new Promise(res => {
-    const { food, conf } = demoPick(file);
-    setTimeout(() => res({ ...toBase(food), confidence: conf, source: "demo" }), 850);
-  });
-}
 function normalizeAI(d) {
   let it = d;
   if (Array.isArray(d.items) && d.items.length) {
@@ -473,6 +468,10 @@ function normalizeAI(d) {
     confidence: conf, source: "ai",
   };
 }
+/* Returns a real AI result, or null when photo AI is unavailable.
+   We deliberately do NOT fabricate a random "match" — a wrong guess
+   (e.g. calling an energy drink "foul medames") is worse than telling
+   the user to search or scan the barcode instead. */
 async function analyzeFood(file) {
   const cfg = window.GYMORA_CONFIG || {};
   if (cfg.aiEndpoint) {
@@ -480,9 +479,9 @@ async function analyzeFood(file) {
       const b64 = await fileToBase64(file);
       const r = await fetch(cfg.aiEndpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image_base64: b64, mime: file.type }) });
       if (r.ok) { const nb = normalizeAI(await r.json()); if (nb) return nb; }
-    } catch (e) { /* fall through to demo */ }
+    } catch (e) { /* AI unavailable — return null below */ }
   }
-  return demoAnalyze(file);
+  return null;
 }
 
 /* ---------- rendering ---------- */
@@ -559,6 +558,18 @@ function scannerHTML() {
           </div>
         </div>
       </div>
+    </div>`;
+  }
+  if (nScan.status === "failed") {
+    return `<div class="section ct-scan">
+      ${nScan.previewURL ? `<div class="ct-preview sm"><img src="${nScan.previewURL}" alt=""></div>` : ""}
+      <div class="ct-detected">⚠️ <b>${t("ctFailedTitle")}</b></div>
+      <div class="note" style="margin:4px 0 10px">${t("ctFailedBody")}</div>
+      <input id="ctSearch" class="ct-searchbox" data-food="search" type="text" placeholder="${esc(t("ctSearchPh"))}" value="${esc(nQuery)}">
+      <button class="ct-photobtn" id="ctBarcode" type="button" style="margin:8px 0 0">📷 ${t("ctScanBarcode")}</button>
+      <div id="ctFoodResults" class="ct-foods">${foodResultsHTML()}</div>
+      <label class="ct-photobtn" for="foodPhotoInput">🔁 ${t("ctTryAgain")}</label>
+      <input id="foodPhotoInput" type="file" accept="image/*" capture="environment" data-food="photo" hidden>
     </div>`;
   }
   // idle: pick-what-you-ate first, photo optional
@@ -659,8 +670,12 @@ function handleFoodChange(e) {
       nScan = { status: "analyzing", previewURL: reader.result, base: null, amount: 0, unit: "g", baseAmt: 250, baseUnit: "g" };
       reRenderSection();
       analyzeFood(file)
-        .then(base => { setScanFood(base, reader.result); reRenderSection(); })
-        .catch(() => { resetNutrition(); reRenderSection(); toast("⚠️"); });
+        .then(base => {
+          if (base) { setScanFood(base, reader.result); }
+          else { nScan = { status: "failed", previewURL: reader.result, base: null, amount: 0, unit: "g", baseAmt: 250, baseUnit: "g" }; }
+          reRenderSection();
+        })
+        .catch(() => { nScan = { status: "failed", previewURL: reader.result, base: null, amount: 0, unit: "g", baseAmt: 250, baseUnit: "g" }; reRenderSection(); });
     };
     reader.readAsDataURL(file);
     return true;
