@@ -97,6 +97,32 @@ function tkLocalVisible(u) {
     : all.filter(x => x.by === u.email);
 }
 
+/* Count of open tickets visible to this team member (for dashboards). */
+function tkOpenCount(u) {
+  try { return tkLocalVisible(u).filter(x => (x.status || "open") === "open").length; } catch (e) { return 0; }
+}
+/* Ticket counts by status for a support dashboard. */
+function tkCounts(u) {
+  const out = { open: 0, answered: 0, closed: 0, total: 0 };
+  try {
+    tkLocalVisible(u).forEach(x => { const s = x.status || "open"; if (out[s] != null) out[s]++; out.total++; });
+  } catch (e) {}
+  return out;
+}
+/* The most recent open tickets, for a quick-answer list on the dashboard. */
+function tkRecentOpen(u, n) {
+  try {
+    return tkLocalVisible(u).filter(x => (x.status || "open") === "open")
+      .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0))
+      .slice(0, n || 5);
+  } catch (e) { return []; }
+}
+/* Open the tickets queue straight onto a specific ticket. */
+function gotoTicket(id) {
+  gotoTickets();
+  if (typeof loadTicket === "function") setTimeout(() => loadTicket(id), 0);
+}
+
 /* ---------- loading ---------- */
 async function loadTickets(silent) {
   const u = currentUser(); if (!u) return;
