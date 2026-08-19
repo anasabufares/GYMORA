@@ -38,37 +38,9 @@ exports.handler = async (event) => {
 
   try {
     const response = await client.messages.create({
-      model: "claude-opus-4-8", // swap to "claude-haiku-4-5" for lower cost per photo
+      // Haiku is fast and cheap for vision; override with AI_MODEL env if desired.
+      model: process.env.AI_MODEL || "claude-haiku-4-5",
       max_tokens: 1024,
-      // Guarantee valid JSON in the shape the app expects.
-      output_config: {
-        format: {
-          type: "json_schema",
-          schema: {
-            type: "object",
-            properties: {
-              items: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    name: { type: "string" },
-                    kcal: { type: "number" },
-                    protein: { type: "number" },
-                    carbs: { type: "number" },
-                    fat: { type: "number" },
-                  },
-                  required: ["name", "kcal", "protein", "carbs", "fat"],
-                  additionalProperties: false,
-                },
-              },
-              confidence: { type: "number" },
-            },
-            required: ["items", "confidence"],
-            additionalProperties: false,
-          },
-        },
-      },
       messages: [
         {
           role: "user",
@@ -77,27 +49,33 @@ exports.handler = async (event) => {
             {
               type: "text",
               text:
-                "Identify the food in this photo and estimate its nutrition for the portion shown. " +
-                "Return each distinct food as an item with name (short, e.g. \"Chicken shawarma\"), " +
-                "kcal, protein (g), carbs (g), and fat (g). confidence is 0-100. " +
-                "If you cannot tell it is food, return an empty items array and confidence 0.",
+                "Identify the food/drink in this photo and estimate its nutrition for the portion shown. " +
+                "This includes packaged products and branded drinks (read the label if visible). " +
+                "Respond with ONLY minified JSON, no prose and no code fences, in exactly this shape: " +
+                '{"items":[{"name":"","kcal":0,"protein":0,"carbs":0,"fat":0}],"confidence":0} ' +
+                "where name is short (e.g. \"Monster Energy (white)\"), macros are grams, and confidence is 0-100. " +
+                "If you cannot tell it is food or drink, return {\"items\":[],\"confidence\":0}.",
             },
           ],
         },
       ],
     });
 
-    // output_config.format guarantees the first text block is valid JSON.
-    const text = response.content.find((b) => b.type === "text")?.text || "{}";
+    // Be tolerant of any wrapping text/code-fences: pull out the JSON object.
+    const raw = (response.content.find((b) => b.type === "text") || {}).text || "{}";
+    const match = raw.match(/\{[\s\S]*\}/);
+    const body = match ? match[0] : '{"items":[],"confidence":0}';
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: text, // already { items: [...], confidence } — matches the app's normalizeAI()
+      body, // { items: [...], confidence } — matches the app's normalizeAI()
     };
   } catch (err) {
+    // 401/permission → key missing or invalid; surface a clear hint in logs.
+    const detail = String((err && err.message) || err);
     return {
       statusCode: 502,
-      body: JSON.stringify({ error: "AI analysis failed", detail: String(err && err.message || err) }),
+      body: JSON.stringify({ error: "AI analysis failed", detail }),
     };
   }
 };

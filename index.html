@@ -191,8 +191,10 @@
   <!-- Toast -->
   <div class="toast" id="toast"></div>
 
-  <!-- To enable real photo AI later, uncomment and point at your deployed endpoint:
-       <script>window.GYMORA_CONFIG = { aiEndpoint: "/.netlify/functions/analyze-food" };</script> -->
+  <!-- Photo AI endpoint. The serverless function only responds once
+       ANTHROPIC_API_KEY is set in the Netlify environment; until then the
+       app cleanly shows "couldn't identify" and users use search/barcode. -->
+  <script>window.GYMORA_CONFIG = Object.assign(window.GYMORA_CONFIG || {}, { aiEndpoint: "/.netlify/functions/analyze-food" });</script>
   <script src="data.js"></script>
   <script src="cloud.js"></script>
   <script src="keys.js"></script>
