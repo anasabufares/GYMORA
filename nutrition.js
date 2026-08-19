@@ -763,46 +763,58 @@ function barcodeManual() {
   const code = window.prompt(t("ctBarcodePrompt"));
   if (code && String(code).replace(/\D/g, "")) lookupBarcode(code);
 }
-/* Uses the browser's native BarcodeDetector + camera when available,
-   otherwise falls back to manual entry. */
+/* Real camera scanner via html5-qrcode (works on iOS Safari, Android,
+   desktop). Falls back to manual entry only if the library or camera
+   is unavailable. */
 async function startBarcodeScan() {
-  const hasDetector = "BarcodeDetector" in window;
-  if (!hasDetector || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+  const H5 = window.Html5Qrcode;
+  if (!H5 || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
     return barcodeManual();
   }
-  let stream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-  } catch (e) { toast(t("ctCamDenied")); return barcodeManual(); }
   const back = document.createElement("div");
   back.id = "bcBack"; back.className = "vid-back open";
   back.innerHTML = `<div class="vid-modal bc-modal">
       <button class="auth-x" id="bcX">✕</button>
       <div class="vid-title">📷 ${t("ctScanBarcode")}</div>
-      <div class="bc-frame"><video id="bcVid" playsinline muted></video><div class="bc-line"></div></div>
+      <div id="bcReader" class="bc-frame"></div>
       <button class="btn ghost block" id="bcManual" style="margin-top:10px">⌨️ ${t("ctBarcodePrompt")}</button>
     </div>`;
   document.body.appendChild(back);
-  const stop = () => { try { stream.getTracks().forEach(tk => tk.stop()); } catch (e) {} back.remove(); };
-  back.addEventListener("click", (e) => {
-    if (e.target.id === "bcBack" || e.target.closest("#bcX")) stop();
-    if (e.target.closest("#bcManual")) { stop(); barcodeManual(); }
-  });
-  const vid = back.querySelector("#bcVid");
-  vid.srcObject = stream; await vid.play().catch(() => {});
-  let detector;
-  try { detector = new window.BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"] }); }
-  catch (e) { detector = new window.BarcodeDetector(); }
-  let active = true;
-  const tick = async () => {
-    if (!active || !document.body.contains(back)) return;
+
+  const fmts = window.Html5QrcodeSupportedFormats;
+  const formats = fmts ? [
+    fmts.EAN_13, fmts.EAN_8, fmts.UPC_A, fmts.UPC_E, fmts.UPC_EAN_EXTENSION,
+    fmts.CODE_128, fmts.CODE_39, fmts.CODE_93, fmts.ITF, fmts.QR_CODE,
+  ].filter(v => v !== undefined) : undefined;
+
+  const scanner = new H5("bcReader", formats ? { formatsToSupport: formats, verbose: false } : { verbose: false });
+  let done = false;
+  const stop = () => {
     try {
-      const codes = await detector.detect(vid);
-      if (codes && codes.length && codes[0].rawValue) {
-        active = false; const val = codes[0].rawValue; stop(); lookupBarcode(val); return;
-      }
-    } catch (e) { /* keep trying */ }
-    requestAnimationFrame(tick);
+      if (scanner.isScanning) scanner.stop().then(() => scanner.clear()).catch(() => {});
+      else scanner.clear();
+    } catch (e) {}
+    back.remove();
   };
-  requestAnimationFrame(tick);
+  back.addEventListener("click", (e) => {
+    if (e.target.id === "bcBack" || e.target.closest("#bcX")) { done = true; stop(); }
+    if (e.target.closest("#bcManual")) { done = true; stop(); barcodeManual(); }
+  });
+
+  const onHit = (text) => {
+    if (done) return;
+    done = true;
+    if (navigator.vibrate) { try { navigator.vibrate(60); } catch (e) {} }
+    stop(); lookupBarcode(text);
+  };
+  try {
+    await scanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: (w, h) => { const m = Math.min(w, h); return { width: Math.round(m * 0.8), height: Math.round(m * 0.55) }; } },
+      onHit,
+      () => {} // per-frame "not found" — ignored
+    );
+  } catch (e) {
+    if (!done) { stop(); toast(t("ctCamDenied")); barcodeManual(); }
+  }
 }
