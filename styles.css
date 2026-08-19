@@ -1184,6 +1184,8 @@ h1, .hero h1, .acct-body h3 { letter-spacing: -.02em; font-weight: 900; }
 .pm-price { font-weight: 900; font-size: 19px; }
 .pm-per { font-size: 11px; color: var(--muted); }
 .pm-go { margin-top: 6px; pointer-events: none; }
+.pm-coach { border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.pm-coach .kv { align-items: flex-start; }
 .pm-chip {
   display: block; width: max-content; max-width: 100%; margin-bottom: 12px;
   font-size: 12px; font-weight: 800; padding: 6px 12px; border-radius: 999px;

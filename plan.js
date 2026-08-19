@@ -35,6 +35,23 @@ const PLAN_I18N = {
     reminders: "Reminders", gymReminder: "Gym reminder", restReminder: "Rest-day reminder", testReminder: "Test",
     remGymMsg: "🏋️ Time to train — head to the gym!", remRestMsg: "😴 Rest day — recover, stretch and hydrate.",
     remNote: "Reminders show while the app is open (plus a desktop notification if you allow it). Always-on push arrives with the backend.",
+    coachTitle: "Recommended for your goal",
+    coachFocus: "Training focus", coachCardio: "Cardio", coachReps: "Rep range", coachProgress: "How to progress",
+    coach_lose_focus: "Full-body strength + higher reps to keep muscle while you burn fat.",
+    coach_lose_cardio: "3–5× per week — 20–30 min brisk incline walk or intervals after weights.",
+    coach_lose_progress: "Keep a small calorie deficit and add a little weight or a rep each week.",
+    coach_build_focus: "Push / Pull / Legs split — progressive overload on the main lifts.",
+    coach_build_cardio: "Light, 1–2× per week, just for heart health — don't burn your surplus.",
+    coach_build_progress: "Add weight or reps every session; eat in a small surplus and hit your protein.",
+    coach_gain_focus: "Heavy compound lifts, lower reps, longer rests to build size and strength.",
+    coach_gain_cardio: "Minimal — a short warm-up is enough while you're gaining.",
+    coach_gain_progress: "Eat in a clear surplus and add weight on squats, presses and deadlifts weekly.",
+    coach_recomp_focus: "Upper / lower strength work to build muscle and lose fat at the same time.",
+    coach_recomp_cardio: "2–3× per week, moderate — enough to stay lean without losing strength.",
+    coach_recomp_progress: "Eat near maintenance, prioritise protein, and push the weights up slowly.",
+    coach_fit_focus: "Balanced full-body training to stay strong, mobile and healthy.",
+    coach_fit_cardio: "2–3× per week of anything you enjoy — walking, cycling, classes.",
+    coach_fit_progress: "Stay consistent and gradually add reps or weight as it gets easier.",
   },
   ar: {
     myPlan: "خطتي",
@@ -58,6 +75,23 @@ const PLAN_I18N = {
     reminders: "التذكيرات", gymReminder: "تذكير النادي", restReminder: "تذكير يوم الراحة", testReminder: "تجربة",
     remGymMsg: "🏋️ وقت التمرين — توجّه إلى النادي!", remRestMsg: "😴 يوم راحة — تعافَ ومدّد واشرب الماء.",
     remNote: "تظهر التذكيرات أثناء فتح التطبيق (مع إشعار سطح المكتب إن سمحت). الإشعارات الدائمة تأتي مع الخادم.",
+    coachTitle: "موصى به لهدفك",
+    coachFocus: "تركيز التمرين", coachCardio: "الكارديو", coachReps: "نطاق التكرارات", coachProgress: "كيف تتقدّم",
+    coach_lose_focus: "قوة لكامل الجسم مع تكرارات أعلى للحفاظ على العضلات أثناء حرق الدهون.",
+    coach_lose_cardio: "3–5 مرات أسبوعياً — 20–30 دقيقة مشي مائل سريع أو إنترفال بعد الأوزان.",
+    coach_lose_progress: "حافظ على عجز حراري بسيط وأضف وزناً صغيراً أو تكراراً كل أسبوع.",
+    coach_build_focus: "تقسيمة دفع/سحب/أرجل — زيادة تدريجية للأحمال على التمارين الأساسية.",
+    coach_build_cardio: "خفيف، 1–2 مرة أسبوعياً لصحة القلب فقط — لا تحرق الفائض.",
+    coach_build_progress: "أضف وزناً أو تكرارات كل حصة؛ كُل بفائض بسيط والتزم بالبروتين.",
+    coach_gain_focus: "تمارين مركّبة ثقيلة، تكرارات أقل، راحات أطول لبناء الحجم والقوة.",
+    coach_gain_cardio: "أدنى حد — إحماء قصير يكفي أثناء الزيادة.",
+    coach_gain_progress: "كُل بفائض واضح وأضف وزناً على السكوات والضغط والرفعة الميتة أسبوعياً.",
+    coach_recomp_focus: "تمارين قوة علوي/سفلي لبناء العضل وخسارة الدهون في آنٍ معاً.",
+    coach_recomp_cardio: "2–3 مرات أسبوعياً باعتدال — يكفي للبقاء رشيقاً دون فقدان القوة.",
+    coach_recomp_progress: "كُل قرب مستوى الثبات، أعطِ الأولوية للبروتين، وارفع الأوزان تدريجياً.",
+    coach_fit_focus: "تدريب متوازن لكامل الجسم للبقاء قوياً ومرناً وصحياً.",
+    coach_fit_cardio: "2–3 مرات أسبوعياً بما تحب — مشي، دراجة، حصص.",
+    coach_fit_progress: "استمر بثبات وأضف تكرارات أو وزناً تدريجياً كلما أصبح أسهل.",
   },
 };
 Object.assign(I18N.en, PLAN_I18N.en);
@@ -225,6 +259,20 @@ function planFormHTML(u) {
   ${u.intake ? `<button class="btn ghost block" id="cancelPlan" style="margin-top:8px">${t("cancel")}</button>` : ""}`;
 }
 
+/* Goal-specific coaching card — explains WHY this workout suits the
+   user's goal (fat loss, muscle build, weight gain, recomp, fitness). */
+function goalCoachHTML(goal, rep) {
+  const g = ["lose", "build", "gain", "recomp", "fit"].includes(goal) ? goal : "fit";
+  const row = (label, val) => `<div class="kv"><span>${label}</span><span style="text-align:end;max-width:62%">${val}</span></div>`;
+  return `
+  <div class="section pm-coach">
+    <h4>🎯 ${t("coachTitle")} — ${goalLabel(goal)}</h4>
+    ${row("🏋️ " + t("coachFocus"), t("coach_" + g + "_focus"))}
+    ${row("🔁 " + t("coachReps"), rep)}
+    ${row("🏃 " + t("coachCardio"), t("coach_" + g + "_cardio"))}
+    ${row("📈 " + t("coachProgress"), t("coach_" + g + "_progress"))}
+  </div>`;
+}
 function planViewHTML(u) {
   const p = calcPlan(u), week = buildWeek(u), inx = u.intake, rep = repScheme(inx.goal);
   const r = u.reminders || defaultReminders();
@@ -261,6 +309,8 @@ function planViewHTML(u) {
       ${week.map(d => `<div class="wk ${d.rest ? "rest" : ""}"><div class="wk-d">${d.day[state.lang]}</div><div class="wk-w">${d.rest ? "😴 " + t("restDay") : WK[d.workout].name[state.lang].split("—")[0]}</div></div>`).join("")}
     </div>
   </div>
+
+  ${goalCoachHTML(inx.goal, rep)}
 
   <div class="section">
     <h4>🏋️ ${t("workoutPlan")}</h4>
