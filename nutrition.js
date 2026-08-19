@@ -48,6 +48,15 @@ const NUT_I18N = {
     ctNoMatch: "No match. Try another word, or add by photo.",
     ctPickTitle: "What did you eat?",
     ctDemoNote: "Pick what you ate from the list, or add by photo. Photo guessing uses a built-in library in demo mode; real photo AI turns on when connected to the cloud (see AI-SETUP).",
+    ctOnline: "More results online",
+    ctSearching: "Searching millions of foods…",
+    ctScanBarcode: "Scan barcode",
+    ctBarcodePrompt: "Enter the barcode number",
+    ctLooking: "Looking up product…",
+    ctNotFound: "Product not found. Try the name instead.",
+    ctPer100: "per 100 g",
+    ctOffCredit: "Online food data from Open Food Facts",
+    ctCamDenied: "Camera unavailable — enter the barcode number instead.",
   },
   ar: {
     calorieTracker: "حاسبة السعرات",
@@ -77,6 +86,15 @@ const NUT_I18N = {
     ctNoMatch: "لا نتائج. جرّب كلمة أخرى أو أضف بصورة.",
     ctPickTitle: "ماذا أكلت؟",
     ctDemoNote: "اختر ما أكلته من القائمة أو أضف بصورة. تخمين الصورة يستخدم مكتبة مدمجة في الوضع التجريبي؛ يعمل تحليل الصور بالذكاء الاصطناعي عند الربط بالسحابة (راجع AI-SETUP).",
+    ctOnline: "نتائج إضافية عبر الإنترنت",
+    ctSearching: "نبحث في ملايين الأطعمة…",
+    ctScanBarcode: "مسح الباركود",
+    ctBarcodePrompt: "أدخل رقم الباركود",
+    ctLooking: "جاري البحث عن المنتج…",
+    ctNotFound: "لم يُعثر على المنتج. جرّب البحث بالاسم.",
+    ctPer100: "لكل 100 غ",
+    ctOffCredit: "بيانات الأطعمة عبر الإنترنت من Open Food Facts",
+    ctCamDenied: "الكاميرا غير متاحة — أدخل رقم الباركود يدوياً.",
   },
 };
 Object.assign(I18N.en, NUT_I18N.en);
@@ -311,13 +329,61 @@ const FOOD_BASE = {
   hot_chocolate: [250, "ml"], milkshake: [300, "ml"], ayran: [250, "ml"], lemonade: [250, "ml"],
   olive_oil: [14, "g"], ketchup: [15, "g"], mayo: [14, "g"], tahini: [15, "g"], sugar: [4, "g"],
 };
-function foodBase(key) { return FOOD_BASE[key] || [250, "g"]; }
+/* Online (Open Food Facts) foods are registered at runtime: their
+   per-serving base weight lives in OFF_BASE and the food objects in
+   offFoods, so search/pick/scale all work the same as built-ins. */
+let offFoods = [];         // OFF-derived foods seen this session
+const OFF_BASE = {};       // key -> [amount, unit]
+function foodBase(key) { return FOOD_BASE[key] || OFF_BASE[key] || [250, "g"]; }
+function allFoods() { return offFoods.length ? FOODS.concat(offFoods) : FOODS; }
+function findFood(key) { return allFoods().find(x => x.key === key) || null; }
 const fmtAmt = (n) => Number(n.toFixed(2));
+
+/* ---------- Open Food Facts (free, no API key) ---------- */
+const OFF_ORIGIN = "https://world.openfoodfacts.org";
+/* Map one OFF product to our food shape (nutrition is per 100 g). */
+function offToFood(p) {
+  if (!p || !p.nutriments) return null;
+  const n = p.nutriments;
+  let kcal = n["energy-kcal_100g"];
+  if (kcal == null && n["energy_100g"] != null) kcal = n["energy_100g"] / 4.184; // kJ → kcal
+  kcal = Math.round(kcal || 0);
+  if (!kcal) return null; // skip products with no usable energy value
+  const nm = [p.product_name, p.brands ? p.brands.split(",")[0] : ""].filter(Boolean).join(" · ").slice(0, 64) || "Food";
+  const key = "off_" + (p.code || nm);
+  const food = {
+    key, emoji: "🍽️", off: true,
+    name: { en: nm, ar: nm },
+    serving: { en: t("ctPer100"), ar: t("ctPer100") },
+    kcal, p: Math.round(n.proteins_100g || 0), c: Math.round(n.carbohydrates_100g || 0), f: Math.round(n.fat_100g || 0),
+  };
+  OFF_BASE[key] = [100, "g"];
+  if (!offFoods.some(x => x.key === key)) offFoods.push(food);
+  return food;
+}
+async function offSearch(query) {
+  const q = String(query || "").trim();
+  if (q.length < 3) return [];
+  const url = OFF_ORIGIN + "/cgi/search.pl?search_terms=" + encodeURIComponent(q) +
+    "&search_simple=1&action=process&json=1&page_size=20&fields=code,product_name,brands,nutriments";
+  const r = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!r.ok) throw new Error("off");
+  const data = await r.json();
+  return (data.products || []).map(offToFood).filter(Boolean);
+}
+async function offByBarcode(code) {
+  const c = String(code || "").replace(/\D/g, "");
+  if (!c) return null;
+  const r = await fetch(OFF_ORIGIN + "/api/v0/product/" + c + ".json", { headers: { Accept: "application/json" } });
+  if (!r.ok) return null;
+  const data = await r.json();
+  return data.status === 1 ? offToFood(data.product) : null;
+}
 
 /* ---------- transient scan state (not persisted) ---------- */
 let nScan = { status: "idle", previewURL: null, base: null, amount: 0, unit: "g", baseAmt: 250, baseUnit: "g" };
 let nQuery = "";
-function resetNutrition() { nScan = { status: "idle", previewURL: null, base: null, amount: 0, unit: "g", baseAmt: 250, baseUnit: "g" }; nQuery = ""; }
+function resetNutrition() { nScan = { status: "idle", previewURL: null, base: null, amount: 0, unit: "g", baseAmt: 250, baseUnit: "g" }; nQuery = ""; nOffResults = []; nOffStatus = "idle"; }
 function setScanFood(base, previewURL) {
   const [amt, unit] = foodBase(base.key);
   nScan = { status: "result", previewURL: previewURL || null, base, amount: amt, unit, baseAmt: amt, baseUnit: unit };
@@ -346,19 +412,33 @@ function scaled(base, portion) {
   return { kcal: Math.round(base.kcal * portion), p: Math.round(base.p * portion), c: Math.round(base.c * portion), f: Math.round(base.f * portion) };
 }
 function foodOptions(sel) {
-  return FOODS.map(f => `<option value="${f.key}"${f.key === sel ? " selected" : ""}>${f.emoji} ${f.name[state.lang]}</option>`).join("");
+  return allFoods().map(f => `<option value="${f.key}"${f.key === sel ? " selected" : ""}>${f.emoji} ${f.name[state.lang]}</option>`).join("");
+}
+let nOffResults = [];   // Open Food Facts matches for the current query
+let nOffStatus = "idle"; // idle | loading | done | error
+function foodCardHTML(f) {
+  return `<button class="ct-food${f.off ? " off" : ""}" data-food-pick="${esc(f.key)}">
+       <span class="fr-emo">${f.emoji}</span>
+       <span class="ct-food-n">${esc(f.name[state.lang])}${f.off ? ` <small class="ct-off-tag">${t("ctPer100")}</small>` : ""}</span>
+       <small>${f.kcal} ${t("kcal")}</small>
+     </button>`;
 }
 function foodResultsHTML() {
   const q = nQuery.trim().toLowerCase();
   const qa = nQuery.trim();
   const list = FOODS.filter(f => !q || f.name.en.toLowerCase().includes(q) || (f.name.ar || "").includes(qa));
-  if (!list.length) return `<div class="note">${t("ctNoMatch")}</div>`;
-  return list.map(f =>
-    `<button class="ct-food" data-food-pick="${f.key}">
-       <span class="fr-emo">${f.emoji}</span>
-       <span class="ct-food-n">${f.name[state.lang]}</span>
-       <small>${f.kcal} ${t("kcal")}</small>
-     </button>`).join("");
+  const localHTML = list.length ? list.map(foodCardHTML).join("") : "";
+  let onlineHTML = "";
+  if (q.length >= 3) {
+    if (nOffStatus === "loading") onlineHTML = `<div class="note ct-off-head">🌐 ${t("ctSearching")}</div>`;
+    else if (nOffStatus === "done" && nOffResults.length) {
+      onlineHTML = `<div class="note ct-off-head">🌐 ${t("ctOnline")}</div>` + nOffResults.map(foodCardHTML).join("");
+    }
+  }
+  if (!localHTML && !onlineHTML) {
+    return nOffStatus === "loading" ? `<div class="note ct-off-head">🌐 ${t("ctSearching")}</div>` : `<div class="note">${t("ctNoMatch")}</div>`;
+  }
+  return localHTML + onlineHTML;
 }
 
 /* ---------- the "brain": real-AI-ready analyzer ---------- */
@@ -444,9 +524,13 @@ function summaryHTML(tot, tg) {
 }
 function scannerHTML() {
   if (nScan.status === "analyzing") {
-    return `<div class="section ct-scan">
+    return nScan.previewURL
+      ? `<div class="section ct-scan">
       <div class="ct-preview"><img src="${nScan.previewURL}" alt="">
         <div class="ct-analyzing"><span class="ct-spin"></span>${t("ctAnalyzing")}</div></div>
+    </div>`
+      : `<div class="section ct-scan">
+      <div class="ct-analyzing" style="position:static;justify-content:center;padding:24px"><span class="ct-spin"></span>${t("ctLooking")}</div>
     </div>`;
   }
   if (nScan.status === "result" && nScan.base) {
@@ -481,9 +565,11 @@ function scannerHTML() {
   return `<div class="section ct-scan">
     <h4>🍽️ ${t("ctPickTitle")}</h4>
     <input id="ctSearch" class="ct-searchbox" data-food="search" type="text" placeholder="${esc(t("ctSearchPh"))}" value="${esc(nQuery)}">
+    <button class="ct-photobtn" id="ctBarcode" type="button" style="margin:8px 0 0">📷 ${t("ctScanBarcode")}</button>
     <div id="ctFoodResults" class="ct-foods">${foodResultsHTML()}</div>
     <label class="ct-photobtn" for="foodPhotoInput">${t("ctByPhoto")}</label>
     <input id="foodPhotoInput" type="file" accept="image/*" capture="environment" data-food="photo" hidden>
+    <div class="note" style="text-align:center;opacity:.75">🌐 ${t("ctOffCredit")}</div>
   </div>`;
 }
 function todayListHTML(today, tot) {
@@ -553,10 +639,11 @@ function handleFoodClick(e) {
   const hit = (s) => e.target.closest(s);
   const pick = hit("[data-food-pick]");
   if (pick) {
-    const food = FOODS.find(x => x.key === pick.dataset.foodPick);
+    const food = findFood(pick.dataset.foodPick);
     if (food) { setScanFood(toBase(food)); reRenderSection(); }
     return true;
   }
+  if (hit("#ctBarcode")) { startBarcodeScan(); return true; }
   if (hit("#foodAdd")) { foodAdd(); return true; }
   if (hit("#foodDiscard")) { resetNutrition(); reRenderSection(); return true; }
   const df = hit("[data-delfood]"); if (df) { foodRemove(df.dataset.delfood); return true; }
@@ -579,7 +666,7 @@ function handleFoodChange(e) {
     return true;
   }
   if (el.dataset.food === "pick") {
-    const food = FOODS.find(x => x.key === el.value);
+    const food = findFood(el.value);
     if (food) { setScanFood(toBase(food), nScan.previewURL); reRenderSection(); }
     return true;
   }
@@ -606,6 +693,7 @@ document.addEventListener("DOMContentLoaded", () => {
       nQuery = e.target.value;
       const box = document.getElementById("ctFoodResults");
       if (box) box.innerHTML = foodResultsHTML();
+      queueOffSearch(nQuery);
     }
     if (e.target && e.target.id === "ctAmount" && nScan.base) {
       nScan.amount = parseFloat(e.target.value) || 0;
@@ -618,3 +706,88 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   });
 });
+
+/* only the results box is refreshed so the search input keeps focus */
+function refreshFoodResults() {
+  const box = document.getElementById("ctFoodResults");
+  if (box) box.innerHTML = foodResultsHTML();
+}
+
+/* ---------- debounced Open Food Facts search ---------- */
+let offTimer = null, offSeq = 0;
+function queueOffSearch(query) {
+  const q = String(query || "").trim();
+  clearTimeout(offTimer);
+  if (q.length < 3) { nOffStatus = "idle"; nOffResults = []; return; }
+  nOffStatus = "loading"; refreshFoodResults();
+  const seq = ++offSeq;
+  offTimer = setTimeout(async () => {
+    try {
+      const res = await offSearch(q);
+      if (seq !== offSeq) return;         // a newer query superseded this one
+      nOffResults = res; nOffStatus = "done";
+    } catch (e) {
+      if (seq !== offSeq) return;
+      nOffResults = []; nOffStatus = "error";
+    }
+    refreshFoodResults();
+  }, 450);
+}
+
+/* ---------- barcode scanning ---------- */
+async function lookupBarcode(code) {
+  nScan = { status: "analyzing", previewURL: null, base: null, amount: 0, unit: "g", baseAmt: 100, baseUnit: "g" };
+  reRenderSection();
+  try {
+    const food = await offByBarcode(code);
+    if (food) { setScanFood(toBase(food)); reRenderSection(); }
+    else { resetNutrition(); reRenderSection(); toast(t("ctNotFound")); }
+  } catch (e) { resetNutrition(); reRenderSection(); toast(t("ctNotFound")); }
+}
+function barcodeManual() {
+  const code = window.prompt(t("ctBarcodePrompt"));
+  if (code && String(code).replace(/\D/g, "")) lookupBarcode(code);
+}
+/* Uses the browser's native BarcodeDetector + camera when available,
+   otherwise falls back to manual entry. */
+async function startBarcodeScan() {
+  const hasDetector = "BarcodeDetector" in window;
+  if (!hasDetector || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+    return barcodeManual();
+  }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+  } catch (e) { toast(t("ctCamDenied")); return barcodeManual(); }
+  const back = document.createElement("div");
+  back.id = "bcBack"; back.className = "vid-back open";
+  back.innerHTML = `<div class="vid-modal bc-modal">
+      <button class="auth-x" id="bcX">✕</button>
+      <div class="vid-title">📷 ${t("ctScanBarcode")}</div>
+      <div class="bc-frame"><video id="bcVid" playsinline muted></video><div class="bc-line"></div></div>
+      <button class="btn ghost block" id="bcManual" style="margin-top:10px">⌨️ ${t("ctBarcodePrompt")}</button>
+    </div>`;
+  document.body.appendChild(back);
+  const stop = () => { try { stream.getTracks().forEach(tk => tk.stop()); } catch (e) {} back.remove(); };
+  back.addEventListener("click", (e) => {
+    if (e.target.id === "bcBack" || e.target.closest("#bcX")) stop();
+    if (e.target.closest("#bcManual")) { stop(); barcodeManual(); }
+  });
+  const vid = back.querySelector("#bcVid");
+  vid.srcObject = stream; await vid.play().catch(() => {});
+  let detector;
+  try { detector = new window.BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"] }); }
+  catch (e) { detector = new window.BarcodeDetector(); }
+  let active = true;
+  const tick = async () => {
+    if (!active || !document.body.contains(back)) return;
+    try {
+      const codes = await detector.detect(vid);
+      if (codes && codes.length && codes[0].rawValue) {
+        active = false; const val = codes[0].rawValue; stop(); lookupBarcode(val); return;
+      }
+    } catch (e) { /* keep trying */ }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
