@@ -22,12 +22,15 @@ const GP_I18N = {
     gpTitle: "District Gym Pass",
     gpSub: "Pay once for a district and try every gym in it — one free day at each. Then get a members' discount at the gym you love.",
     gpPickArea: "Choose a district",
+    gpPickGyms: "Choose the gyms to try",
+    gpPickGymsSub: "Tap the gyms you want — pay only for those, one trial day each.",
+    gpSelected: "Selected", gpTotal: "Total", gpFrom: "from", gpDay: "day",
     gpGyms: "gyms", gpDays: "day pass", gpDaysN: "{n}-day pass",
     gpBuy: "Get the pass", gpPrice: "Pass price", gpValid: "Valid for",
     gpValidDays: "{n} days from purchase",
     gpHowTitle: "How it works",
-    gpHow1: "Buy the pass for a district.",
-    gpHow2: "Get one free trial day at every gym in that district — one time each.",
+    gpHow1: "Pick a district and choose the gyms you want to try.",
+    gpHow2: "Pay for those gyms only — one trial day at each, one time each.",
     gpHow3: "Show your pass at reception. After trying, subscribe to your favourite with a pass-holder discount.",
     gpActive: "Your active pass", gpArea: "District",
     gpUsed: "used", gpLeft: "left", gpExpires: "Expires",
@@ -49,12 +52,15 @@ const GP_I18N = {
     gpTitle: "باقة نوادي المنطقة",
     gpSub: "ادفع مرة واحدة للمنطقة وجرّب كل نواديها — يوم مجاني في كل نادٍ. ثم احصل على خصم للأعضاء في النادي الذي أعجبك.",
     gpPickArea: "اختر منطقة",
-    gpGyms: "نوادٍ", gpDays: "باقة أيام", gpDaysN: "باقة {n} أيام",
+    gpPickGyms: "اختر النوادي التي تريد تجربتها",
+    gpPickGymsSub: "اختر النوادي التي تريدها — تدفع لها فقط، يوم تجربة لكل نادٍ.",
+    gpSelected: "المختارة", gpTotal: "الإجمالي", gpFrom: "من", gpDay: "يوم",
+    gpGyms: "نوادٍ", gpDays: "يوم تجربة", gpDaysN: "باقة {n} أيام",
     gpBuy: "احصل على الباقة", gpPrice: "سعر الباقة", gpValid: "صالحة لمدة",
     gpValidDays: "{n} يوماً من الشراء",
     gpHowTitle: "كيف تعمل",
-    gpHow1: "اشترِ الباقة لمنطقة ما.",
-    gpHow2: "احصل على يوم تجربة مجاني في كل نادٍ بالمنطقة — مرة واحدة لكل نادٍ.",
+    gpHow1: "اختر منطقة ثم اختر النوادي التي تريد تجربتها.",
+    gpHow2: "ادفع لتلك النوادي فقط — يوم تجربة لكل نادٍ، مرة واحدة لكل نادٍ.",
     gpHow3: "أظهر الباقة في الاستقبال. بعد التجربة، اشترك في ناديك المفضل بخصم حامل الباقة.",
     gpActive: "باقتك الفعّالة", gpArea: "المنطقة",
     gpUsed: "مستخدمة", gpLeft: "متبقية", gpExpires: "تنتهي",
@@ -87,7 +93,19 @@ function gpAreas() {
   return Object.values(map).sort((a, b) => b.gyms.length - a.gyms.length);
 }
 function gpAreaByKey(key) { return gpAreas().find(a => a.key === key) || null; }
-function gpPrice(gymCount) { return gymCount * GP_PER_GYM_JOD; }
+function gpGymById(id) { return (typeof GYMS !== "undefined" ? GYMS : []).find(g => g.id === id) || null; }
+/* Each gym's 1-day pass price. Gyms don't carry an explicit day price,
+   so derive a fair one from the monthly plan (≈ a day of a month), with
+   a small floor. */
+function gpDayPrice(g) {
+  if (!g) return GP_PER_GYM_JOD;
+  if (typeof g.dayPassJOD === "number") return g.dayPassJOD;
+  const monthly = typeof monthlyJOD === "function" ? monthlyJOD(g)
+    : (g.plans && g.plans.length ? Math.min.apply(null, g.plans.filter(p => p.months === 1).map(p => p.priceJOD).concat(g.plans.map(p => p.priceJOD))) : 45);
+  return Math.max(3, Math.round(monthly / 12));
+}
+/* Total for a set of chosen gym ids. */
+function gpTotal(ids) { return (ids || []).reduce((sum, id) => sum + gpDayPrice(gpGymById(id)), 0); }
 
 /* ---------- pass state (stored on the user) ---------- */
 function gpActivePass(u) {
@@ -107,15 +125,17 @@ function gpDiscountFor(gym, u) {
   return gpHoldsPassFor(u || (typeof currentUser === "function" && currentUser()), gym.area.en) ? GP_HOLDER_DISCOUNT : 0;
 }
 
-function gpBuy(areaKey) {
+function gpBuy(areaKey, gymIds) {
   const a = gpAreaByKey(areaKey); if (!a) return;
+  const ids = (gymIds || []).filter(id => a.gyms.some(g => g.id === id));
+  if (!ids.length) return;
   const now = Date.now();
   updateUser({ gymPass: {
     area: a.key, areaName: a.area,
-    gymIds: a.gyms.map(g => g.id),
-    used: {},                          // gymId -> timestamp
+    gymIds: ids,                        // only the gyms the user chose
+    used: {},                           // gymId -> timestamp
     boughtAt: now, expiresAt: now + GP_VALID_DAYS * 86400000,
-    pricePaid: gpPrice(a.gyms.length),
+    pricePaid: gpTotal(ids),
   } });
   toast(t("gpPassBought"));
 }
@@ -128,17 +148,18 @@ function gpRedeem(gymId) {
 }
 
 /* ---------- rendering ---------- */
-let gpSelArea = null;      // area being previewed before buying
-let gpConfirm = false;     // confirm-purchase step
+let gpSelArea = null;      // district chosen (now picking gyms)
+let gpChosen = {};         // gymId -> true, the gyms the user wants to try
 let gpBrowsing = false;    // force the browse screen even while holding a pass
 
-function resetGymPass() { gpSelArea = null; gpConfirm = false; gpBrowsing = false; }
+function resetGymPass() { gpSelArea = null; gpChosen = {}; gpBrowsing = false; }
+function gpChosenIds() { return Object.keys(gpChosen).filter(id => gpChosen[id]); }
 
 function gpFill(str, map) { return String(str).replace(/\{(\w+)\}/g, (_, k) => map[k] != null ? map[k] : ""); }
 
 function secGymPass(u) {
   const pass = gpActivePass(u);
-  if (gpConfirm && gpSelArea) return gpConfirmHTML(u);
+  if (gpSelArea) return gpSelectHTML(u);
   if (pass && !gpBrowsing) return gpActiveHTML(u, pass);
   return gpBrowseHTML(u);
 }
@@ -146,11 +167,12 @@ function secGymPass(u) {
 function gpBrowseHTML(u) {
   const areas = gpAreas();
   const cards = areas.map(a => {
-    const n = a.gyms.length, price = gpPrice(n);
+    const n = a.gyms.length;
+    const from = Math.min.apply(null, a.gyms.map(gpDayPrice));
     return `
     <button class="gp-area" data-gparea="${esc(a.key)}">
       <div class="gp-area-top"><b>${a.area[state.lang]}</b><span class="gp-area-n">${n} ${t("gpGyms")}</span></div>
-      <div class="gp-area-sub">${gpFill(t("gpDaysN"), { n })} · <b>${fmtPrice(price)}</b></div>
+      <div class="gp-area-sub">${t("gpFrom")} <b>${fmtPrice(from)}</b> / ${t("gpDay")}</div>
     </button>`;
   }).join("");
   return `
@@ -169,23 +191,31 @@ function gpBrowseHTML(u) {
   <div class="note">💳 ${t("gpDemoNote")}</div>`;
 }
 
-function gpConfirmHTML(u) {
+/* pick which gyms in the chosen district to include, pay by the sum of
+   their day-pass prices */
+function gpSelectHTML(u) {
   const a = gpAreaByKey(gpSelArea); if (!a) return gpBrowseHTML(u);
-  const n = a.gyms.length, price = gpPrice(n);
+  const chosen = gpChosenIds();
+  const total = gpTotal(chosen);
+  const rows = a.gyms.map(g => {
+    const on = !!gpChosen[g.id];
+    return `
+    <button class="gp-pick ${on ? "on" : ""}" data-gppick="${esc(g.id)}">
+      <span class="gp-check">${on ? "✅" : "⬜"}</span>
+      <span class="gp-pick-main"><b>${g.name[state.lang]}</b><small>${g.area[state.lang]}${g.rating ? ` · ⭐ ${g.rating}` : ""}</small></span>
+      <span class="gp-pick-price">${fmtPrice(gpDayPrice(g))}<small>/${t("gpDay")}</small></span>
+    </button>`;
+  }).join("");
   return `
   <button class="linkbtn" id="gpBack" style="display:inline-block;margin:0 0 12px">‹ ${t("gpPickArea")}</button>
-  <h3>${t("gpConfirmTitle")}</h3>
-  <div class="h-sub">📍 ${a.area[state.lang]}</div>
-  <div class="section">
-    <div class="kv"><span>${a.area[state.lang]}</span><span>${n} ${t("gpGyms")}</span></div>
-    <div class="kv"><span>${t("gpValid")}</span><span>${gpFill(t("gpValidDays"), { n: GP_VALID_DAYS })}</span></div>
-    <div class="kv"><span><b>${t("gpPrice")}</b></span><span><b>${fmtPrice(price)}</b> · ${gpFill(t("gpDaysN"), { n })}</span></div>
+  <h3>${t("gpPickGyms")}</h3>
+  <div class="h-sub">📍 ${a.area[state.lang]} · ${t("gpPickGymsSub")}</div>
+  <div class="gp-picks">${rows}</div>
+  <div class="section" style="position:sticky;bottom:0">
+    <div class="kv"><span>${t("gpSelected")}</span><span><b>${chosen.length}</b> ${t("gpGyms")} · ${chosen.length} ${t("gpDays")}</span></div>
+    <div class="kv"><span><b>${t("gpTotal")}</b></span><span><b>${fmtPrice(total)}</b></span></div>
+    <button class="btn block" id="gpPay"${chosen.length ? "" : " disabled"}>🔒 ${t("gpBuy")}${chosen.length ? " — " + fmtPrice(total) : ""}</button>
   </div>
-  <div class="section">
-    ${a.gyms.map(g => `<div class="kv"><span>🏋️ ${g.name[state.lang]}</span><span class="gp-tag">1 ${t("gpDays")}</span></div>`).join("")}
-  </div>
-  <button class="btn block" id="gpPay">🔒 ${t("gpBuy")} — ${fmtPrice(price)}</button>
-  <button class="btn ghost block" id="gpCancel" style="margin-top:8px">${t("cancel")}</button>
   <div class="note">💳 ${t("gpDemoNote")}</div>`;
 }
 
@@ -229,10 +259,12 @@ function gpActiveHTML(u, pass) {
 function handleGymPassClick(e) {
   const hit = (s) => e.target.closest(s);
   const area = hit("[data-gparea]");
-  if (area) { gpSelArea = area.dataset.gparea; gpConfirm = true; reRenderSection(); return true; }
-  if (hit("#gpBack") || hit("#gpCancel")) { gpSelArea = null; gpConfirm = false; reRenderSection(); return true; }
-  if (hit("#gpPay")) { gpBuy(gpSelArea); gpSelArea = null; gpConfirm = false; gpBrowsing = false; reRenderSection(); return true; }
-  if (hit("#gpChange")) { gpBrowsing = true; gpSelArea = null; gpConfirm = false; reRenderSection(); return true; }
+  if (area) { gpSelArea = area.dataset.gparea; gpChosen = {}; reRenderSection(); return true; }
+  const pick = hit("[data-gppick]");
+  if (pick) { const id = pick.dataset.gppick; gpChosen[id] = !gpChosen[id]; reRenderSection(); return true; }
+  if (hit("#gpBack") || hit("#gpCancel")) { gpSelArea = null; gpChosen = {}; reRenderSection(); return true; }
+  if (hit("#gpPay")) { gpBuy(gpSelArea, gpChosenIds()); gpSelArea = null; gpChosen = {}; gpBrowsing = false; reRenderSection(); return true; }
+  if (hit("#gpChange")) { gpBrowsing = true; gpSelArea = null; gpChosen = {}; reRenderSection(); return true; }
   const use = hit("[data-gpuse]");
   if (use) { gpRedeem(use.dataset.gpuse); reRenderSection(); return true; }
   const open = hit("[data-gpopen]");
