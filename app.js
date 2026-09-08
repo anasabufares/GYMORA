@@ -382,17 +382,30 @@ function renderDetail(g) {
 
       <div class="panel" id="plansPanel">
         <h4 style="margin-bottom:12px">💳 ${t("plansTitle")}</h4>
-        ${g.plans.map((p, i) => `
+        ${(() => {
+          const disc = typeof gpDiscountFor === "function" ? gpDiscountFor(g, typeof currentUser === "function" ? currentUser() : null) : 0;
+          const banner = disc > 0
+            ? `<div class="gp-offer">${t("gpHolderOffer")} — ${(typeof gpFill === "function" ? gpFill(t("gpHolderOff"), { n: Math.round(disc * 100), area: g.area[state.lang] }) : "")}</div>`
+            : "";
+          const plans = g.plans.map((p, i) => {
+            const now = disc > 0 ? Math.round(p.priceJOD * (1 - disc)) : p.priceJOD;
+            const priceHTML = disc > 0
+              ? `<div class="price"><s style="opacity:.6;font-size:.8em">${fmtPrice(p.priceJOD)}</s> ${fmtPrice(now)}</div>`
+              : `<div class="price">${fmtPrice(p.priceJOD)}</div>`;
+            return `
           <div class="plan ${i === 1 ? "best" : ""}">
             <div>
               <div class="pname">${p.name[state.lang]}</div>
               <div style="font-size:12px;color:var(--muted)">${p.months} ${state.lang === "ar" ? "شهر" : "month(s)"}</div>
             </div>
             <div style="text-align:${I18N[state.lang].dir === "rtl" ? "left" : "right"}">
-              <div class="price">${fmtPrice(p.priceJOD)}</div>
+              ${priceHTML}
               <button class="btn" data-subscribe="1" style="margin-top:6px">${t("subscribe")}</button>
             </div>
-          </div>`).join("")}
+          </div>`;
+          }).join("");
+          return banner + plans;
+        })()}
         <div class="contact-btns">
           <a class="btn ghost" href="tel:${g.phone}">📞 ${t("call")}</a>
           <a class="btn" href="https://wa.me/${g.whatsapp.replace('+','')}" target="_blank" rel="noopener" style="background:#25D366">🟢 ${t("whatsapp")}</a>
