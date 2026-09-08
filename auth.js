@@ -204,6 +204,7 @@ function openAuth(view) {
   if (typeof resetPlanEditing === "function") resetPlanEditing();
   if (typeof resetPremium === "function") resetPremium();
   if (typeof resetPayMethods === "function") resetPayMethods();
+  if (typeof resetGymPass === "function") resetGymPass();
   if (typeof resetLibrary === "function") resetLibrary();
   if (typeof resetNutrition === "function") resetNutrition();
   if (typeof resetPortals === "function") resetPortals(); // fresh member list each time
@@ -353,6 +354,7 @@ function sectionHTML(sec) {
   if (sec === "library" && typeof secLibrary === "function") return secLibrary(u);
   if (sec === "premium" && typeof secPremiumTab === "function") return secPremiumTab(u);
   if (sec === "paymethods" && typeof secPayMethods === "function") return secPayMethods(u);
+  if (sec === "gympass" && typeof secGymPass === "function") return secGymPass(u);
   if (sec === "legal" && typeof secPolicy === "function") return secPolicy(u);
   if (sec === "messages" && typeof secMessages === "function") return secMessages(u);
   if (sec === "tickets" && typeof secTickets === "function") return secTickets(u);
@@ -827,6 +829,7 @@ function onAuthClick(e) {
   if (typeof handleTicketClick === "function" && handleTicketClick(e)) return;
   if (typeof handleMsgClick === "function" && handleMsgClick(e)) return;
   if (typeof handleNoticeClick === "function" && handleNoticeClick(e)) return;
+  if (typeof handleGymPassClick === "function" && handleGymPassClick(e)) return;
   if (typeof handlePremiumClick === "function" && handlePremiumClick(e)) return;
   if (typeof handleLibClick === "function" && handleLibClick(e)) return;
   if (typeof handleClassClick === "function" && handleClassClick(e)) return;

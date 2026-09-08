@@ -133,6 +133,7 @@ function navForRole(u) {
   // home-screen category circles; email moved inside Security)
   return [
     ["profile", "👤", t("myProfile")], msg, tickets, news, ["plan", "🎯", t("myPlan")],
+    ["gympass", "🎟️", t("gpTab")],
     ["premium", "⭐", t("pmTab")],
     ["paymethods", "💳", t("payTab")],
     ["workouts", "📋", t("workouts")], ["library", "📚", t("libTitle")],
