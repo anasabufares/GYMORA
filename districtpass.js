@@ -202,7 +202,7 @@ function gpSelectHTML(u) {
     return `
     <button class="gp-pick ${on ? "on" : ""}" data-gppick="${esc(g.id)}">
       <span class="gp-check">${on ? "✅" : "⬜"}</span>
-      <span class="gp-pick-main"><b>${g.name[state.lang]}</b><small>${g.area[state.lang]}${g.rating ? ` · ⭐ ${g.rating}` : ""}</small></span>
+      <span class="gp-pick-main"><b>${g.name[state.lang]}</b><small>${g.area[state.lang]}</small></span>
       <span class="gp-pick-price">${fmtPrice(gpDayPrice(g))}<small>/${t("gpDay")}</small></span>
     </button>`;
   }).join("");
@@ -214,6 +214,7 @@ function gpSelectHTML(u) {
   <div class="section" style="position:sticky;bottom:0">
     <div class="kv"><span>${t("gpSelected")}</span><span><b>${chosen.length}</b> ${t("gpGyms")} · ${chosen.length} ${t("gpDays")}</span></div>
     <div class="kv"><span><b>${t("gpTotal")}</b></span><span><b>${fmtPrice(total)}</b></span></div>
+    <div class="note" style="margin:6px 0 8px">✅ ${t("noHiddenFees")}</div>
     <button class="btn block" id="gpPay"${chosen.length ? "" : " disabled"}>🔒 ${t("gpBuy")}${chosen.length ? " — " + fmtPrice(total) : ""}</button>
   </div>
   <div class="note">💳 ${t("gpDemoNote")}</div>`;

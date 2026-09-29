@@ -42,18 +42,14 @@ function occupancy(gym) {
 }
 
 /* ---------- Reviews (pick 3 per gym deterministically) ---------- */
-function pickReviews(gym) {
-  let h = 0; for (const c of gym.id) h += c.charCodeAt(0);
-  const start = h % REVIEWS.length;
-  return [0, 1, 2].map(i => REVIEWS[(start + i) % REVIEWS.length]);
-}
-
 const $ = (sel, root = document) => root.querySelector(sel);
 const t = (key) => I18N[state.lang][key] ?? key;
 
 /* ---------- Persistence + global chrome ---------- */
 function persist() {
-  localStorage.setItem("fj_lang", state.lang);
+  localStorage.setItem("fj_lang", state.lang); // essential: the language the user chose
+  // optional preferences are only remembered with the user's consent
+  if (typeof consentAllows === "function" && !consentAllows("prefs")) return;
   localStorage.setItem("fj_theme", state.theme);
   localStorage.setItem("fj_accent", state.accent);
   localStorage.setItem("fj_cur", state.currency);
@@ -256,7 +252,7 @@ function cardHTML(g) {
   const accessLabel = { mixed: t("accessMixed"), women: t("accessWomen"), men: t("accessMen") }[g.gender];
   const facils = g.facilities.slice(0, 6).map(k => `<span class="facil" title="${FACILITIES[k][state.lang]}">${FACILITIES[k].icon}</span>`).join("");
   return `
-  <div class="card" data-open="${g.id}">
+  <div class="card" data-open="${g.id}" role="button" tabindex="0" aria-label="${esc(g.name[state.lang])} — ${esc(g.area[state.lang])}">
     <div class="card-media ${g.gradient}">
       <span class="media-mono">${(g.name.en || "G").trim()[0].toUpperCase()}</span>
       <div class="badges">
@@ -264,11 +260,11 @@ function cardHTML(g) {
         ${g.open247 ? `<span class="badge badge-247">🕛 ${t("h247")}</span>` : ""}
         ${dist != null ? `<span class="badge badge-dist">📍 ${dist < 1 ? Math.round(dist * 1000) + " m" : dist.toFixed(1) + " " + t("kmAway")}</span>` : ""}
       </div>
-      <button class="fav ${isFav ? "on" : ""}" data-fav="${g.id}" aria-label="favorite">${isFav ? "♥" : "♡"}</button>
+      <button class="fav ${isFav ? "on" : ""}" data-fav="${g.id}" aria-label="${isFav ? "Remove from favourites" : "Add to favourites"}" aria-pressed="${isFav}">${isFav ? "♥" : "♡"}</button>
     </div>
     <div class="card-body">
       <div class="card-title">${g.name[state.lang]}</div>
-      <div class="card-meta">${PIN_ICO} ${g.area[state.lang]} <span class="rating">★ ${g.rating}</span> <span style="color:var(--muted)">(${g.reviews})</span></div>
+      <div class="card-meta">${PIN_ICO} ${g.area[state.lang]}</div>
       <div class="occ occ-${occ.level}"><span class="dot"></span>${t("busyNow")}: ${occLabel}</div>
       <div class="facil-row">${facils}</div>
       <button class="cmp-toggle ${inCmp ? "on" : ""}" data-cmp="${g.id}">${inCmp ? "✓ " + t("inCompare") : "⇄ " + t("addCompare")}</button>
@@ -298,15 +294,12 @@ function renderDetail(g) {
   const occLabel = t("occ" + occ.level[0].toUpperCase() + occ.level.slice(1));
   const occColor = occ.level === "quiet" ? "#22c55e" : occ.level === "moderate" ? "#f59e0b" : "#ef4444";
 
+  /* Only verified member reviews may be shown. None are collected yet,
+     so no ratings or reviews are displayed (no placeholder/sample ones). */
   const reviewsBlock = `
     <div class="section">
-      <h4>⭐ ${t("reviewsTitle")} (${g.reviews})</h4>
-      ${pickReviews(g).map(r => `
-        <div class="review">
-          <div class="rev-top"><b>${r.author}</b><span class="rev-stars">${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</span></div>
-          <div class="rev-text">${r.text[state.lang]}</div>
-          <div class="rev-date">${new Date(Date.now() - r.days * 86400000).toLocaleDateString(state.lang === "ar" ? "ar-JO" : "en-US", { day: "numeric", month: "short", year: "numeric" })}</div>
-        </div>`).join("")}
+      <h4>⭐ ${t("reviewsTitle")}</h4>
+      <div class="note">${t("noReviewsYet")}</div>
     </div>`;
 
   const scheduleBlock = g.facilities.includes("classes") ? `
@@ -331,8 +324,7 @@ function renderDetail(g) {
     <h1 style="margin-bottom:4px">${g.name[state.lang]}</h1>
     <div class="card-meta" style="margin-bottom:8px">${PIN_ICO} ${g.address[state.lang]}</div>
     <div class="dstats">
-      <div class="dstat"><div class="n">★ ${g.rating}</div><div class="l">${g.reviews} ${t("reviews")}</div></div>
-      <div class="dstat"><div class="n" style="color:${occColor}">${occ.pct}%</div><div class="l">${occLabel}</div></div>
+      <div class="dstat"><div class="n" style="color:${occColor}">~${occ.pct}%</div><div class="l">${occLabel} (${t("estShort")})</div></div>
       <div class="dstat"><div class="n">${fmtPrice(monthlyJOD(g))}</div><div class="l">${t("from")}${t("perMonth")}</div></div>
     </div>
     <div>${g.open247 ? `<span class="offer" style="background:var(--accent);color:#fff;border-color:var(--accent)">🕛 ${t("open247")}</span>` : ""}${offers}</div>
@@ -374,7 +366,7 @@ function renderDetail(g) {
           <div class="coming">
             <div class="tile"><div class="ico">⚖️</div><div class="t">${t("f_weight")}</div><div class="soon">soon</div></div>
             <div class="tile"><div class="ico">📋</div><div class="t">${t("f_workout")}</div><div class="soon">soon</div></div>
-            <div class="tile live" data-openai="1"><div class="ico">📷</div><div class="t">${t("f_ai")}</div><div class="soon live">${t("ctTry")} →</div></div>
+            <div class="tile live" data-openai="1" role="button" tabindex="0"><div class="ico">📷</div><div class="t">${t("f_ai")}</div><div class="soon live">${t("ctTry")} →</div></div>
             <div class="tile"><div class="ico">💳</div><div class="t">${t("f_pay")}</div><div class="soon">soon</div></div>
           </div>
         </div>
@@ -433,7 +425,12 @@ function renderFooter() {
   const ar = state.lang === "ar";
   const place = ar ? "عمّان، الأردن" : "Amman, Jordan";
   const sample = state.gymsLive ? "" : (ar ? " · بيانات تجريبية" : " · Sample data");
-  el.textContent = `GYMORA${sample} · ${place} 🇯🇴`;
+  const B = typeof BUSINESS !== "undefined" ? BUSINESS : null;
+  const legal = ar ? "القوانين والسياسات" : "Terms, Privacy, Refunds & Cookies";
+  const choices = ar ? "خيارات الخصوصية" : "Privacy choices";
+  el.innerHTML = `<div>GYMORA${sample} · ${place} 🇯🇴</div>
+    ${B ? `<div class="foot-biz">${esc(B.legalName)} · ${esc(B.regNo)} · <a href="mailto:${esc(B.email)}">${esc(B.email)}</a></div>` : ""}
+    <div class="foot-links"><a href="#" data-openpolicy="1">${legal}</a> · <a href="#" data-consent-manage="1">${choices}</a></div>`;
 }
 
 /* the filters sidebar exists for the gym list and nothing else */
@@ -554,7 +551,6 @@ function openCompare() {
   const row = (label, fn) => `<tr><td class="cmp-lbl">${label}</td>${gyms.map(g => `<td>${fn(g)}</td>`).join("")}</tr>`;
   const head = `<tr><th></th>${gyms.map(g => `<th>${g.name[state.lang]}<div class="cmp-th-sub">${g.area[state.lang]}</div></th>`).join("")}</tr>`;
   const rows = [
-    row(t("cmpRating"), g => `<span class="rating">★ ${g.rating}</span>`),
     row(t("cmpPrice"), g => `<b>${fmtPrice(monthlyJOD(g))}</b><small>${t("perMonth")}</small>`),
     row(t("cmpAccess"), g => access[g.gender]),
     row(t("cmpPool"), g => yn(g.pool)),
@@ -685,6 +681,7 @@ function bind() {
   // modals
   $("#modalClose").onclick = closePayModal;
   $("#modalBack").addEventListener("click", (e) => { if (e.target.id === "modalBack") closePayModal(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("#modalBack").classList.contains("open")) closePayModal(); });
   $("#cmpBack").addEventListener("click", (e) => { if (e.target.id === "cmpBack") closeCompare(); });
 }
 

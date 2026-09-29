@@ -43,12 +43,28 @@
     return el;
   }
 
+  function relLum(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || "").trim()); if (!m) return null;
+    const c = [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16) / 255)
+      .map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  function pickOnAccent(accent) {
+    const l = relLum(accent); if (l == null) return null;
+    const dark = relLum("#052e12");
+    const vsDark = (l + 0.05) / (dark + 0.05), vsWhite = 1.05 / (l + 0.05);
+    return vsDark >= vsWhite ? "#052e12" : "#ffffff";
+  }
+
   function tokenBlock(selector, tokens) {
     if (!tokens) return "";
     const lines = Object.keys(tokens)
       .filter(k => TOKEN_VARS[k] && tokens[k])
       .map(k => `  ${TOKEN_VARS[k]}: ${cleanVal(tokens[k])};`);
     if (tokens.fontScale) lines.push(`  --font-scale: ${parseFloat(tokens.fontScale) || 1};`);
+    // keep button text readable (WCAG AA) whatever accent colour is published
+    const onAccent = pickOnAccent(tokens.accent);
+    if (onAccent) lines.push(`  --on-accent: ${onAccent};`);
     return lines.length ? `${selector} {\n${lines.join("\n")}\n}\n` : "";
   }
 

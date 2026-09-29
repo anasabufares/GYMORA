@@ -248,7 +248,7 @@ function obRender() {
 function obWelcomeHTML() {
   return `
   <div class="ob-card ob-center">
-    <img src="logo-mark.png" alt="" width="72" height="72" style="margin:0 auto 10px;display:block">
+    <img src="logo-mark.png" alt="GYMORA logo" width="72" height="72" style="margin:0 auto 10px;display:block">
     <h2 class="ob-q" style="text-align:center">${t("obWelcomeTitle")}</h2>
     <div class="ob-sub" style="text-align:center">${t("obWelcomeSub")}</div>
     <div class="ob-opts">
@@ -302,8 +302,9 @@ function obDoneHTML() {
     <div style="font-size:64px;text-align:center">${g === "f" ? "🏋️‍♀️" : "🏋️"}</div>
     <h2 class="ob-q" style="text-align:center">${t("obDoneTitle")}</h2>
     <div class="ob-sub" style="text-align:center">${sub}</div>
-    <button class="btn block" id="${offerTrial ? "obTrialPlan" : "obSeePlan"}">${offerTrial ? t("pmSeePlanTrial") : t("obSeePlan")}</button>
-    ${offerTrial ? `<div class="note" style="text-align:center">${t("pmTrialNote")}</div>` : ""}
+    <button class="btn block" id="obSeePlan">${t("obSeePlan")}</button>
+    ${offerTrial ? `<button class="btn ghost block" id="obTrialPlan" style="margin-top:8px">${t("pmTrialBtn")}</button>
+    <div class="note" style="text-align:center">${t("pmTrialNote")}</div>` : ""}
     <button class="auth-link block-center" id="obLater">${t("obLater")}</button>
   </div>`;
 }
@@ -442,9 +443,9 @@ function obClick(e) {
   }
   if (hit("#obVerifyLater")) { obStep = "done"; obRender(); return; }
   if (hit("#obTrialPlan")) {
-    premiumStartTrial();
+    // go through the normal trial flow (terms + payment method) — never start it silently
     closeOnboarding(true);
-    if (typeof openAuth === "function") { openAuth("account"); switchSection("plan"); }
+    if (typeof pmOpenSubscription === "function") pmOpenSubscription();
     return;
   }
   if (hit("#obSeePlan")) {

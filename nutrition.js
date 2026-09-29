@@ -47,9 +47,9 @@ const NUT_I18N = {
     ctByPhoto: "📷 Add by photo (auto-guesses the food)",
     ctNoMatch: "No match. Try another word, or add by photo.",
     ctPickTitle: "What did you eat?",
-    ctDemoNote: "Search any food (millions online), scan a barcode, or snap a photo. Photo recognition uses AI — set ANTHROPIC_API_KEY in Netlify to turn it on (see AI-SETUP); until then, use search or barcode.",
+    ctDemoNote: "Search a food, scan a barcode, or snap a photo. Nutrition values are estimates — check the label when accuracy matters. If photo recognition is unavailable, use search or barcode.",
     ctOnline: "More results online",
-    ctSearching: "Searching millions of foods…",
+    ctSearching: "Searching the online food database…",
     ctScanBarcode: "Scan barcode",
     ctBarcodePrompt: "Enter the barcode number",
     ctLooking: "Looking up product…",
@@ -57,6 +57,7 @@ const NUT_I18N = {
     ctPer100: "per 100 g",
     ctOffCredit: "Online food data from Open Food Facts",
     ctCamDenied: "Camera unavailable — enter the barcode number instead.",
+    ctPhotoAlt: "Your food photo",
     ctFailedTitle: "Couldn't identify this photo",
     ctFailedBody: "Photo AI isn't available right now. Search the food by name or scan its barcode below.",
     ctTryAgain: "Try another photo",
@@ -96,9 +97,9 @@ const NUT_I18N = {
     ctByPhoto: "📷 أضف بصورة (تخمين تلقائي للطعام)",
     ctNoMatch: "لا نتائج. جرّب كلمة أخرى أو أضف بصورة.",
     ctPickTitle: "ماذا أكلت؟",
-    ctDemoNote: "ابحث عن أي طعام (ملايين عبر الإنترنت)، أو امسح باركود، أو التقط صورة. التعرف بالصورة يعمل بالذكاء الاصطناعي — فعّل ANTHROPIC_API_KEY في Netlify لتشغيله (راجع AI-SETUP)؛ حتى ذلك استخدم البحث أو الباركود.",
+    ctDemoNote: "ابحث عن طعام، أو امسح باركود، أو التقط صورة. القيم الغذائية تقديرية — راجع الملصق عند الحاجة للدقة. إن لم يتوفر التعرّف بالصورة، استخدم البحث أو الباركود.",
     ctOnline: "نتائج إضافية عبر الإنترنت",
-    ctSearching: "نبحث في ملايين الأطعمة…",
+    ctSearching: "نبحث في قاعدة بيانات الأطعمة عبر الإنترنت…",
     ctScanBarcode: "مسح الباركود",
     ctBarcodePrompt: "أدخل رقم الباركود",
     ctLooking: "جاري البحث عن المنتج…",
@@ -106,6 +107,7 @@ const NUT_I18N = {
     ctPer100: "لكل 100 غ",
     ctOffCredit: "بيانات الأطعمة عبر الإنترنت من Open Food Facts",
     ctCamDenied: "الكاميرا غير متاحة — أدخل رقم الباركود يدوياً.",
+    ctPhotoAlt: "صورة طعامك",
     ctFailedTitle: "تعذّر التعرف على الصورة",
     ctFailedBody: "تحليل الصور بالذكاء الاصطناعي غير متاح حالياً. ابحث عن الطعام بالاسم أو امسح الباركود بالأسفل.",
     ctTryAgain: "جرّب صورة أخرى",
@@ -640,7 +642,7 @@ function scannerHTML() {
   if (nScan.status === "analyzing") {
     return nScan.previewURL
       ? `<div class="section ct-scan">
-      <div class="ct-preview"><img src="${nScan.previewURL}" alt="">
+      <div class="ct-preview"><img src="${nScan.previewURL}" alt="${esc(t("ctPhotoAlt"))}">
         <div class="ct-analyzing"><span class="ct-spin"></span>${t("ctAnalyzing")}</div></div>
     </div>`
       : `<div class="section ct-scan">
@@ -654,7 +656,7 @@ function scannerHTML() {
       : (b.confidence != null ? `<span class="ct-conf">${b.confidence}% ${t("ctConfidence")}</span>` : "");
     return `<div class="section ct-scan">
       <div class="ct-result">
-        ${nScan.previewURL ? `<div class="ct-preview sm"><img src="${nScan.previewURL}" alt=""></div>` : ""}
+        ${nScan.previewURL ? `<div class="ct-preview sm"><img src="${nScan.previewURL}" alt="${esc(t("ctPhotoAlt"))}"></div>` : ""}
         <div class="ct-rbody">
           <div class="ct-detected"><span class="fr-emo">${b.emoji}</span> <b>${b.name[state.lang]}</b> ${tag}</div>
           <div class="ct-serving">${b.serving[state.lang]}</div>
@@ -696,7 +698,7 @@ function scannerHTML() {
   }
   if (nScan.status === "failed") {
     return `<div class="section ct-scan">
-      ${nScan.previewURL ? `<div class="ct-preview sm"><img src="${nScan.previewURL}" alt=""></div>` : ""}
+      ${nScan.previewURL ? `<div class="ct-preview sm"><img src="${nScan.previewURL}" alt="${esc(t("ctPhotoAlt"))}"></div>` : ""}
       <div class="ct-detected">⚠️ <b>${t("ctFailedTitle")}</b></div>
       <div class="note" style="margin:4px 0 10px">${t("ctFailedBody")}</div>
       <input id="ctSearch" class="ct-searchbox" data-food="search" type="text" placeholder="${esc(t("ctSearchPh"))}" value="${esc(nQuery)}">

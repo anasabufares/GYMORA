@@ -13,7 +13,7 @@ const EXLIB_IMG_BASE = "https://raw.githubusercontent.com/yuhonas/free-exercise-
 const LIB_I18N = {
   en: {
     libTitle: "Exercise library", catLibrary: "Exercises",
-    libSub: "873 exercises — every muscle, every machine. Search, filter, learn the form.",
+    libSub: "873 exercises across all major muscle groups. Search, filter, learn the form.",
     libSearch: "Search exercises… (e.g. squat, biceps, cable)",
     libMuscle: "Muscle", libEquip: "Equipment", libLevel: "Level", libAll: "All",
     cat_strength: "Strength", cat_cardio: "Cardio", cat_plyometrics: "Plyometrics",
@@ -27,7 +27,7 @@ const LIB_I18N = {
     libHow: "How to do it", libWatch: "Watch video guide", libSearchYT: "Find video on YouTube",
     libLoading: "Loading the exercise library…",
     libBack: "All exercises",
-    libAnimated: "Animated demo",
+    libAnimated: "Animated demo", libStartPos: "start position", libEndPos: "end position",
     libAddWorkout: "Add to today's workout",
     libAdded: "Added — it's in your Workout tracker 📋",
     libNeedPremium: "The workout tracker is a Premium feature — start your free trial from My plan.",
@@ -44,7 +44,7 @@ const LIB_I18N = {
   },
   ar: {
     libTitle: "مكتبة التمارين", catLibrary: "التمارين",
-    libSub: "873 تمريناً — كل عضلة وكل جهاز. ابحث وصفِّ وتعلّم الأداء الصحيح.",
+    libSub: "873 تمريناً لجميع المجموعات العضلية الرئيسية. ابحث وصفِّ وتعلّم الأداء الصحيح.",
     libSearch: "ابحث عن تمرين… (مثل squat أو biceps)",
     libMuscle: "العضلة", libEquip: "المعدات", libLevel: "المستوى", libAll: "الكل",
     cat_strength: "قوة", cat_cardio: "كارديو", cat_plyometrics: "بلايومترك",
@@ -58,7 +58,7 @@ const LIB_I18N = {
     libHow: "طريقة الأداء", libWatch: "شاهد فيديو الشرح", libSearchYT: "ابحث عن فيديو على يوتيوب",
     libLoading: "نحمّل مكتبة التمارين…",
     libBack: "كل التمارين",
-    libAnimated: "عرض متحرك",
+    libAnimated: "عرض متحرك", libStartPos: "وضعية البداية", libEndPos: "وضعية النهاية",
     libAddWorkout: "أضِف إلى تمرين اليوم",
     libAdded: "أُضيف — تجده في متتبّع التمارين 📋",
     libNeedPremium: "متتبّع التمارين ميزة بريميوم — ابدأ تجربتك المجانية من خطتي.",
@@ -168,13 +168,13 @@ function libResultsHTML() {
     if (locked) {
       return `
     <button class="lib-card lib-locked" data-vidlock="1" data-exn="${esc(x.n)}" data-vtitle="${esc(x.n)}">
-      <img class="lib-thumb" src="${EXLIB_IMG_BASE}${esc(x.img[0])}" alt="">
+      <img class="lib-thumb" src="${EXLIB_IMG_BASE}${esc(x.img[0])}" alt="${esc(x.n)}">
       <div class="lib-card-lock"><span class="pm-lock">🔒</span></div>
     </button>`;
     }
     return `
     <button class="lib-card" data-libopen="${i}">
-      <img class="lib-thumb" src="${EXLIB_IMG_BASE}${esc(x.img[0])}" alt="">
+      <img class="lib-thumb" src="${EXLIB_IMG_BASE}${esc(x.img[0])}" alt="${esc(x.n)}">
       <div class="lib-card-body">
         <div class="lib-name">${esc(x.n)}</div>
         <div class="lib-meta">${(x.m || []).slice(0, 2).map(m => `<span class="chip lib-chip">${musLabel(m)}</span>`).join("")}<span class="chip lib-chip lv-${x.lv}">${lvlLabel(x.lv)}</span></div>
@@ -212,11 +212,11 @@ function libDetailHTML(x, i) {
     ? `<div class="ex-anim"><video src="${esc(local)}" autoplay loop muted playsinline controls
          style="width:100%;height:100%;object-fit:contain;background:#0d0d0d"></video></div>`
     : (!unlocked && imgs.length)
-      ? `<div class="ex-anim ex-locked"><img class="ex-anim-a" src="${esc(imgs[0])}" alt="" style="position:static">${lockOverlay}</div>`
+      ? `<div class="ex-anim ex-locked"><img class="ex-anim-a" src="${esc(imgs[0])}" alt="${esc(x.n)} — ${esc(t("libStartPos"))}" style="position:static">${lockOverlay}</div>`
       : imgs.length >= 2
-        ? `<div class="ex-anim"><img class="ex-anim-a" src="${esc(imgs[0])}" alt=""><img class="ex-anim-b" src="${esc(imgs[1])}" alt=""><span class="ex-anim-tag">${t("libAnimated")}</span></div>`
+        ? `<div class="ex-anim"><img class="ex-anim-a" src="${esc(imgs[0])}" alt="${esc(x.n)} — ${esc(t("libStartPos"))}"><img class="ex-anim-b" src="${esc(imgs[1])}" alt="${esc(x.n)} — ${esc(t("libEndPos"))}"><span class="ex-anim-tag">${t("libAnimated")}</span></div>`
         : imgs.length === 1
-          ? `<div class="ex-anim"><img class="ex-anim-a" src="${esc(imgs[0])}" alt="" style="position:static"></div>`
+          ? `<div class="ex-anim"><img class="ex-anim-a" src="${esc(imgs[0])}" alt="${esc(x.n)} — ${esc(t("libStartPos"))}" style="position:static"></div>`
           : "";
   return `
   <button class="linkbtn" id="libBack" style="display:inline-block;margin:0 0 12px">‹ ${t("libBack")}</button>
