@@ -104,6 +104,13 @@
 
     logout() { clearToken(); },
 
+    /* Right to erasure: delete the cloud account and its data. */
+    async deleteAccount(password) {
+      const r = await callFull("/profile", "DELETE", { password }, true);
+      if (r.ok) clearToken();
+      return r;
+    },
+
     async pull() { return call("/profile", "GET", null, true); },
 
     /* email verification: server generates & emails the code */

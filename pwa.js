@@ -79,6 +79,8 @@
   }
 
   function showBanner() {
+    // never stack on top of the privacy-choice banner — wait until it's answered
+    try { if (!localStorage.getItem("gym_consent")) { setTimeout(function () { whenReady(showBanner); }, 8000); return; } } catch (e) {}
     if (document.getElementById("pwaBanner")) return;
     injectCSS();
     var T = TXT[lang()];
@@ -87,7 +89,7 @@
     el.id = "pwaBanner";
     el.setAttribute("role", "dialog");
     el.innerHTML =
-      '<img src="icon-192.png" alt="" />' +
+      '<img src="icon-192.png" alt="GYMORA app icon" />' +
       '<div class="pwa-txt"><h4>' + T.title + "</h4><p>" +
       (isIOS ? T.ios : T.android) + "</p></div>" +
       '<div class="pwa-actions">' +

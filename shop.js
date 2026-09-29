@@ -67,6 +67,7 @@ function secSupps(u) {
           <span><b>${fmtPrice(it.priceJOD * q)}</b> <button class="auth-link fr-del" data-remsupp="${k}">✕</button></span></div>`;
       }).join("")}
       <div class="kv" style="border-bottom:none"><span><b>${t("total")}</b></span><span><b>${fmtPrice(totalJOD)}</b></span></div>
+      <div class="note" style="margin:6px 0 8px">✅ ${t("noHiddenFees")}</div>
       <button class="btn block" id="suppCheckout">💳 ${t("checkout")} — ${fmtPrice(totalJOD)}</button>
     </div>` : `<div class="note">${t("cartEmpty")}</div>`;
   return `

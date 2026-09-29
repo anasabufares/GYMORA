@@ -203,7 +203,7 @@ const SUPP = {
   omega: { name: { en: "Omega-3 (fish oil)", ar: "أوميغا-3 (زيت سمك)" }, note: { en: "Heart, joints and recovery.", ar: "للقلب والمفاصل والتعافي." } },
   vitd: { name: { en: "Vitamin D", ar: "فيتامين د" }, note: { en: "Common deficiency; bones & immunity.", ar: "نقص شائع؛ للعظام والمناعة." } },
   whey: { name: { en: "Whey protein", ar: "بروتين واي" }, note: { en: "Helps hit your daily protein target.", ar: "يساعد على بلوغ هدف البروتين اليومي." } },
-  creatine: { name: { en: "Creatine monohydrate", ar: "كرياتين مونوهيدرات" }, note: { en: "5 g/day — strength & muscle. Well-researched.", ar: "5غ يومياً — للقوة والعضل. مدروس جيداً." } },
+  creatine: { name: { en: "Creatine monohydrate", ar: "كرياتين مونوهيدرات" }, note: { en: "Commonly used at 5 g/day by people doing strength training.", ar: "يُستخدم عادةً بجرعة 5غ يومياً لمن يمارسون تمارين القوة." } },
   caffeine: { name: { en: "Caffeine / green tea", ar: "كافيين / شاي أخضر" }, note: { en: "Energy and appetite control.", ar: "طاقة وتحكّم بالشهية." } },
 };
 function suppsFor(goal) {

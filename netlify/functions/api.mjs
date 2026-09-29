@@ -136,6 +136,9 @@ function verifyToken(token) {
 
 /* ---- passwords ---- */
 const hashPassword = (pw, salt) => scryptSync(String(pw), salt, 32).toString("hex");
+/* signed token for one-click unsubscribe links */
+const unsubToken = (email) => createHmac("sha256", SECRET).update("unsub|" + String(email).toLowerCase()).digest("hex").slice(0, 32);
+const SITE_URL = process.env.SITE_URL || process.env.URL || "";
 
 /* ---- responses ---- */
 const CORS = {
@@ -187,6 +190,22 @@ export default async (req) => {
   async function adminEmail() {
     const me = await requester();
     return me && me.profile.role === "admin" ? me.email : null;
+  }
+
+  /* One-click unsubscribe from marketing email (signed link, no login). */
+  if (req.method === "GET" && path === "/unsubscribe") {
+    const e = String(url.searchParams.get("e") || "").toLowerCase();
+    const tok = String(url.searchParams.get("t") || "");
+    const page = (msg) => new Response(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GYMORA</title><div style="font-family:Arial,sans-serif;max-width:460px;margin:60px auto;padding:24px;text-align:center"><h2>GYMORA</h2><p>${msg}</p></div>`, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } });
+    if (!e || tok !== unsubToken(e)) return page("This unsubscribe link is invalid or expired. You can turn emails off in the app: Account → Notifications.");
+    const rec = await users.get(e, { type: "json" });
+    if (rec && rec.profile) {
+      rec.profile.notif = Object.assign({}, rec.profile.notif, { offers: false, news: false });
+      rec.profile.marketingConsent = null;
+      rec.updatedAt = Date.now();
+      await users.setJSON(e, rec);
+    }
+    return page("You've been unsubscribed from GYMORA offers and news. You'll still get essential account emails (like verification codes). / تم إلغاء اشتراكك من العروض والأخبار.");
   }
 
   if (req.method === "GET" && path === "/health") {
@@ -540,6 +559,11 @@ export default async (req) => {
             <p style="font-size:34px;font-weight:bold;letter-spacing:8px;margin:12px 0">${code}</p>
             <p style="color:#888">The code expires in 15 minutes. If you didn't create a GYMORA account, ignore this email.<br>
             تنتهي صلاحية الرمز خلال 15 دقيقة. إذا لم تنشئ حساباً في GYMORA فتجاهل هذه الرسالة.</p>
+            <hr style="border:none;border-top:1px solid #eee;margin:20px 0">
+            <p style="color:#999;font-size:12px;line-height:1.5">This is an essential account email sent because this address was used to sign up for GYMORA.
+            ${process.env.BUSINESS_NAME || "GYMORA"} · ${process.env.BUSINESS_ADDRESS || "Amman, Jordan"} · ${process.env.SENDER_EMAIL || ""}<br>
+            <a href="${SITE_URL}/api/unsubscribe?e=${encodeURIComponent(to)}&t=${unsubToken(to)}" style="color:#999">Unsubscribe from offers &amp; news</a> ·
+            <a href="${SITE_URL}/" style="color:#999">Manage email preferences in the app</a></p>
           </div>`,
         }),
       });
@@ -974,6 +998,27 @@ export default async (req) => {
       record.updatedAt = Date.now();
       await users.setJSON(email, record);
       return json(200, { ok: true });
+    }
+
+    /* Right to erasure: delete the account and the personal data tied to
+       it. Requires the password again so a stolen token can't wipe it. */
+    if (req.method === "DELETE") {
+      let body; try { body = await req.json(); } catch { body = {}; }
+      if (record.hash && record.salt) {
+        const a = Buffer.from(hashPassword(String(body.password || ""), record.salt));
+        const b = Buffer.from(record.hash);
+        if (a.length !== b.length || !timingSafeEqual(a, b)) return json(403, { error: "Password is incorrect" });
+      }
+      // support tickets opened by this user
+      const tlist = (await ticketStore.get("list", { type: "json" })) || [];
+      const mine = tlist.filter(x => x && x.by === email);
+      for (const x of mine) { try { await ticketStore.delete("t:" + x.id); } catch {} }
+      if (mine.length) await ticketStore.setJSON("list", tlist.filter(x => !(x && x.by === email)));
+      // message inbox (the other side keeps their own copy of past chats)
+      try { await msgStore.delete("inbox:" + email); } catch {}
+      // the account itself
+      await users.delete(email);
+      return json(200, { ok: true, deleted: true });
     }
   }
 

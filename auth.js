@@ -133,7 +133,7 @@ function resizeImage(file, max, cb) {
   reader.onerror = () => cb(null);
   reader.readAsDataURL(file);
 }
-function avatarInner(u) { return u.avatar ? `<img class="avatar-img" src="${u.avatar}" alt="">` : initials(u.name); }
+function avatarInner(u) { return u.avatar ? `<img class="avatar-img" src="${u.avatar}" alt="${esc(u.name || "")}">` : initials(u.name); }
 
 /* ---------- storage ---------- */
 const getUsers  = () => JSON.parse(localStorage.getItem("fj_users") || "[]");
@@ -144,7 +144,52 @@ const clearSession = () => localStorage.removeItem("fj_session");
 const currentUser = () => { const s = getSession(); return s ? getUsers().find(u => u.email === s) || null : null; };
 
 /* ---------- helpers ---------- */
+/* Legacy (pre-hash) encoding — kept ONLY to verify and upgrade old accounts. */
 const obf = (pw) => btoa(unescape(encodeURIComponent(pw)));
+/* Synchronous SHA-256 (hex) — the on-device password copy is stored as a
+   salted one-way hash, never in a readable form. */
+function sha256Hex(str) {
+  const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  const bytes = Array.from(unescape(encodeURIComponent(str)), c => c.charCodeAt(0));
+  const bitLen = bytes.length * 8;
+  bytes.push(0x80);
+  while (bytes.length % 64 !== 56) bytes.push(0);
+  for (let i = 7; i >= 0; i--) bytes.push(i >= 4 ? 0 : (bitLen >>> (i * 8)) & 0xff);
+  let h = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let o = 0; o < bytes.length; o += 64) {
+    const w = new Array(64);
+    for (let i = 0; i < 16; i++) w[i] = (bytes[o+4*i] << 24) | (bytes[o+4*i+1] << 16) | (bytes[o+4*i+2] << 8) | bytes[o+4*i+3];
+    for (let i = 16; i < 64; i++) {
+      const s0 = rotr(w[i-15], 7) ^ rotr(w[i-15], 18) ^ (w[i-15] >>> 3);
+      const s1 = rotr(w[i-2], 17) ^ rotr(w[i-2], 19) ^ (w[i-2] >>> 10);
+      w[i] = (w[i-16] + s0 + w[i-7] + s1) | 0;
+    }
+    let [a, b, c, d, e, f, g, hh] = h;
+    for (let i = 0; i < 64; i++) {
+      const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+      const t1 = (hh + S1 + ((e & f) ^ (~e & g)) + K[i] + w[i]) | 0;
+      const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+      const t2 = (S0 + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      hh = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    h = [h[0]+a, h[1]+b, h[2]+c, h[3]+d, h[4]+e, h[5]+f, h[6]+g, h[7]+hh].map(x => x | 0);
+  }
+  return h.map(x => (x >>> 0).toString(16).padStart(8, "0")).join("");
+}
+/* salted with the account's permanent id (stable across email changes) */
+const pwHash = (pw, salt) => "s256$" + sha256Hex("gymora|" + salt + "|" + pw);
+/* Check a password; upgrades a legacy base64 copy to a hash on success. */
+function pwCheck(u, pw) {
+  if (!u || !u.pw) return false;
+  if (u.pw.indexOf("s256$") === 0) return u.pw === pwHash(pw, u.id);
+  if (u.pw === obf(pw)) {                      // legacy account → migrate now
+    const users = getUsers(); const i = users.findIndex(x => x.email === u.email);
+    if (i >= 0) { users[i].pw = pwHash(pw, users[i].id); saveUsers(users); u.pw = users[i].pw; }
+    return true;
+  }
+  return false;
+}
 const val = (id) => { const el = document.getElementById(id); return el ? el.value : ""; };
 const validEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -168,13 +213,18 @@ function updateUser(patch) {
 }
 function createUser(data, provider = "email") {
   const users = getUsers();
+  const uid = "u" + Date.now();
   const u = {
-    id: "u" + Date.now(), name: data.name, email: data.email, pw: obf(data.pw || Math.random().toString(36)),
+    id: uid, name: data.name, email: data.email, pw: pwHash(data.pw || Math.random().toString(36), uid),
     age: data.age || 18, gender: "na", goal: "fit", city: "", phone: data.phone || "", createdAt: Date.now(),
     role: data.role || "user", gymId: data.gymId || null, verified: !!data.verified, banned: false,
     twoFA: false, twoFASecret: null, recovery: [], passkeys: 0, provider,
-    privacy: { profilePublic: true, showFav: false, trainerContact: true, shareData: true },
-    notif: { offers: true, expiry: true, classes: true, news: false },
+    // privacy by default: nothing is shared or public unless the user turns it on
+    privacy: { profilePublic: false, showFav: false, trainerContact: true, shareData: false },
+    // service reminders on; marketing only with explicit opt-in at sign-up
+    notif: { offers: !!data.marketing, expiry: true, classes: true, news: !!data.marketing },
+    marketingConsent: data.marketing ? { at: Date.now() } : null,
+    guardianConsent: data.guardianConsent || null,
     intake: null, weights: [], reminders: { gym: { on: false, time: "19:00" }, rest: { on: false, time: "10:00" } },
     payMethods: [],
     acceptedTerms: data.acceptedTerms || null,
@@ -284,6 +334,12 @@ function signupHTML() {
     <div style="font-size:12px;color:var(--muted);margin-top:6px">${t("accessKeyHint")} ${t("keyGymNote")}</div></div>
   <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin:4px 0 8px">
     <input type="checkbox" id="agreeAge"> ${t("agreeAge")}</label>
+  <label id="guardianRow" style="display:none;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted);margin:0 0 8px">
+    <input type="checkbox" id="agreeGuardian" style="margin-top:2px">
+    <span>${t("guardianConsent")}</span></label>
+  <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted);margin:0 0 8px">
+    <input type="checkbox" id="agreeMarketing" style="margin-top:2px">
+    <span>${t("marketingOptIn")}</span></label>
   <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted);margin:0 0 12px">
     <input type="checkbox" id="agreeTerms" style="margin-top:2px">
     <span>${t("polAcceptShort").replace("{link}", `<a href="#" data-openpolicy="1" style="color:var(--accent);text-decoration:underline">${t("polAcceptLink")}</a>`)}</span></label>
@@ -549,6 +605,11 @@ function secPrefs() {
 }
 function secDanger() {
   return `<h3 style="color:#ef4444">${t("dangerZone")}</h3><div class="h-sub">${t("deleteWarn")}</div>
+  <div class="section">
+    <h4>📦 ${t("dlData")}</h4>
+    <div class="note" style="margin:0 0 8px">${t("dlDataSub")}</div>
+    <button class="btn ghost" id="dlMyData">⬇️ ${t("dlData")}</button>
+  </div>
   <div class="danger-box">
     <div style="font-weight:700;margin-bottom:8px">${t("deleteAccount")}</div>
     <button class="danger-btn" id="deleteAcct">${t("deleteAccount")}</button>
@@ -634,16 +695,20 @@ async function handleSignIn() {
   const email = val("inEmail").trim().toLowerCase(), pw = val("inPassword");
   if (!email || !pw) return showErr(t("fillAll"));
   let u = getUsers().find(x => x.email === email);
-  if ((!u || u.pw !== obf(pw)) && window.GymoraCloud) {
+  let cloudOk = false;
+  if ((!u || !pwCheck(u, pw)) && window.GymoraCloud) {
     // Not on this device (or password changed elsewhere) — try the cloud account.
     const r = await GymoraCloud.login(email, pw);
     if (r && r.profile) {
+      // the server verified the password (scrypt) — store only a local hash
+      const prof = Object.assign({}, r.profile);
+      prof.pw = pwHash(pw, prof.id || ("u" + Date.now()));
       const users = getUsers().filter(x => x.email !== email);
-      users.push(r.profile); saveUsers(users);
-      u = r.profile;
+      users.push(prof); saveUsers(users);
+      u = prof; cloudOk = true;
     }
   }
-  if (!u || u.pw !== obf(pw)) return showErr(t("badLogin"));
+  if (!u || !(cloudOk || pwCheck(u, pw))) return showErr(t("badLogin"));
   if (u.banned) return showErr(t("bannedMsg"));
   const wantRole = val("inRoleSignin") || "user";
   if ((u.role || "user") !== wantRole) return showErr(t("roleMismatch").replace("{role}", roleLabel(u.role || "user")));
@@ -657,6 +722,8 @@ async function handleSignUp() {
   const ageStr = val("inAge"), age = parseInt(ageStr, 10), pw = val("inPassword"), cf = val("inConfirm");
   const agree = document.getElementById("agreeAge").checked;
   const agreeTerms = document.getElementById("agreeTerms") ? document.getElementById("agreeTerms").checked : false;
+  const agreeGuardian = !!(document.getElementById("agreeGuardian") && document.getElementById("agreeGuardian").checked);
+  const marketing = !!(document.getElementById("agreeMarketing") && document.getElementById("agreeMarketing").checked);
   const role = val("inRole") || "user", gymId = val("inGym") || null;
   const needsKey = role === "coach" || role === "staff" || role === "owner";
   const phone = val("inPhone").trim();
@@ -665,6 +732,7 @@ async function handleSignUp() {
   if (!validEmail(email)) return showErr(t("emailInvalid"));
   if (!(age >= 12 && age <= 100)) return showErr(t("ageInvalid"));
   if (!agree) return showErr(t("ageInvalid"));
+  if (age < 18 && !agreeGuardian) return showErr(t("guardianRequired"));
   if (!agreeTerms) return showErr(typeof t === "function" ? t("polMustAccept") : "Please accept the Terms & Privacy Policy.");
   if (pw.length < 6) return showErr(t("pwShort"));
   if (pw !== cf) return showErr(t("pwMismatch"));
@@ -688,13 +756,13 @@ async function handleSignUp() {
       if (!rec) return showErr(t("accessKeyBad"));
       grantedRole = rec.role; grantedGym = rec.gymId || gymId;
     }
-    const nu = createUser({ name, email, age, pw, phone, role: grantedRole, gymId: grantedGym, acceptedTerms: { version: (typeof POLICY_VERSION !== "undefined" ? POLICY_VERSION : "1"), at: Date.now() } });
+    const nu = createUser({ name, email, age, pw, phone, role: grantedRole, gymId: grantedGym, acceptedTerms: { version: (typeof POLICY_VERSION !== "undefined" ? POLICY_VERSION : "1"), at: Date.now() }, marketing, guardianConsent: age < 18 ? { at: Date.now() } : null });
     setSession(email);
     if (window.GymoraCloud) GymoraCloud.pushSoon(nu); // background: sync the full profile
     return startVerify();
   }
 
-  const nu = createUser({ name, email, age, pw, role, gymId, acceptedTerms: { version: (typeof POLICY_VERSION !== "undefined" ? POLICY_VERSION : "1"), at: Date.now() } }); setSession(email);
+  const nu = createUser({ name, email, age, pw, role, gymId, acceptedTerms: { version: (typeof POLICY_VERSION !== "undefined" ? POLICY_VERSION : "1"), at: Date.now() }, marketing, guardianConsent: age < 18 ? { at: Date.now() } : null }); setSession(email);
   if (window.GymoraCloud) {
     const r = await GymoraCloud.signup(email, pw, nu); // create the cloud account
     // Backend reachable but refused it (almost always: email already
@@ -791,28 +859,43 @@ function saveProfile() {
 }
 function changePassword() {
   const u = currentUser();
-  if (u.pw !== obf(val("curPw"))) return toast(t("wrongCurrent"));
+  if (!pwCheck(u, val("curPw"))) return toast(t("wrongCurrent"));
   const np = val("newPw"), cf = val("confPw");
   if (np.length < 6) return toast(t("pwShort"));
   if (np !== cf) return toast(t("pwMismatch"));
-  updateUser({ pw: obf(np) }); reRenderSection(); toast(t("passwordUpdated"));
+  updateUser({ pw: pwHash(np, u.id) }); reRenderSection(); toast(t("passwordUpdated"));
 }
 function changeEmail() {
   const u = currentUser(), ne = val("newEmailIn").trim().toLowerCase();
   if (!validEmail(ne)) return toast(t("emailInvalid"));
-  if (u.pw !== obf(val("emailPw"))) return toast(t("wrongCurrent"));
+  if (!pwCheck(u, val("emailPw"))) return toast(t("wrongCurrent"));
   if (getUsers().some(x => x.email === ne && x.id !== u.id)) return toast(t("emailTaken"));
   updateUser({ email: ne }); setSession(ne); renderAuthView(); toast(t("emailUpdated"));
 }
 function askDelete() {
   const box = document.querySelector("#acctBody .danger-box");
   box.innerHTML = `<div style="font-weight:700;margin-bottom:8px;color:#ef4444">${t("deleteWarn")}</div>
+    <div class="form-row"><label for="delPw">${t("delPwLabel")}</label><input id="delPw" type="password" autocomplete="current-password"></div>
     <button class="danger-btn" id="confirmDelete">${t("confirmDelete")}</button>
     <button class="btn ghost" id="cancelDelete" style="margin-inline-start:8px">${t("cancel")}</button>`;
 }
-function doDelete() {
-  saveUsers(getUsers().filter(x => x.email !== getSession()));
-  clearSession(); closeAuth(); renderAll(); toast(t("deleteAccount"));
+/* Erase the account everywhere: the server copy first (if signed in to
+   the cloud), then everything this device stores for the user. */
+async function doDelete() {
+  const u = currentUser(); if (!u) return;
+  const pw = val("delPw");
+  if (!pwCheck(u, pw)) return toast(t("wrongCurrent"));
+  if (window.GymoraCloud && GymoraCloud.hasSession()) {
+    const r = await GymoraCloud.deleteAccount(pw);
+    if (!r.ok && !r.offline) return toast((r.data && r.data.error) || t("delFailed"));
+  }
+  const email = u.email;
+  saveUsers(getUsers().filter(x => x.email !== email));
+  try {
+    const tk = JSON.parse(localStorage.getItem("gym_tickets") || "[]");
+    localStorage.setItem("gym_tickets", JSON.stringify(tk.filter(x => x.by !== email)));
+  } catch (e) {}
+  clearSession(); closeAuth(); renderAll(); toast(t("delDone"));
 }
 function setPref(kind, value) {
   if (kind === "theme") state.theme = value;

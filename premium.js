@@ -19,10 +19,10 @@ const PM_I18N = {
     pmFeat4: "Weekly gym schedule with smart reminders",
     pmWeekly: "Weekly", pmMonthly: "Monthly", pmYearly: "Yearly",
     pmPerWeek: "/ week", pmPerMonth: "/ month", pmPerYear: "/ year",
-    pmPopular: "Most popular", pmBestValue: "Save 50%",
+    pmPopular: "Recommended", pmBestValue: "Save 50% vs monthly",
     pmChoose: "Choose",
     pmTrialBtn: "Start 3-day free trial 🎁",
-    pmTrialNote: "No card needed. One trial per account.",
+    pmTrialNote: "Requires a saved payment method. One trial per account. The trial simply ends after 3 days — you are never charged automatically.",
     pmTrialStarted: "Your 3-day free trial has started 🎉",
     pmTrialDone: "Your free trial has ended — pick a plan to keep your plan & workouts.",
     pmExpired: "Your subscription has ended — renew to keep your plan & workouts.",
@@ -84,10 +84,10 @@ const PM_I18N = {
     pmFeat4: "جدول أسبوعي للنادي مع تذكيرات ذكية",
     pmWeekly: "أسبوعي", pmMonthly: "شهري", pmYearly: "سنوي",
     pmPerWeek: "/ أسبوع", pmPerMonth: "/ شهر", pmPerYear: "/ سنة",
-    pmPopular: "الأكثر شيوعاً", pmBestValue: "وفّر 50%",
+    pmPopular: "مقترح", pmBestValue: "وفّر 50% مقارنةً بالشهري",
     pmChoose: "اختر",
     pmTrialBtn: "ابدأ تجربة مجانية 3 أيام 🎁",
-    pmTrialNote: "لا حاجة لبطاقة. تجربة واحدة لكل حساب.",
+    pmTrialNote: "تتطلب طريقة دفع محفوظة. تجربة واحدة لكل حساب. تنتهي التجربة بعد 3 أيام تلقائياً — ولن يتم خصم أي مبلغ منك تلقائياً.",
     pmTrialStarted: "بدأت تجربتك المجانية لـ 3 أيام 🎉",
     pmTrialDone: "انتهت تجربتك المجانية — اختر خطة للاحتفاظ بخطتك وتمارينك.",
     pmExpired: "انتهى اشتراكك — جدّد للاحتفاظ بخطتك وتمارينك.",
@@ -262,6 +262,7 @@ function pmConfirmHTML(u) {
   <div class="section">
     <div class="kv"><span>${pmLabel(key)}</span><span>${pmPrice(key)} ${pmPer(key)}</span></div>
     <div class="kv"><span><b>${t("pmTotal")}</b></span><span><b>${pmPrice(key)}</b></span></div>
+    <div class="note" style="margin:6px 0 0">✅ ${t("noHiddenFees")}</div>
   </div>
   <h4 style="margin:16px 0 8px">${t("pmPayMethod")}</h4>
   <div class="pm-pays">${methods}</div>

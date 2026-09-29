@@ -58,7 +58,7 @@ const I18N = {
     anyAge: "Any age",
     maxPrice: "Max monthly price",
     sort: "Sort by",
-    sortRating: "Top rated", sortPriceLow: "Price: low → high", sortPriceHigh: "Price: high → low",
+    sortRating: "Recommended", sortPriceLow: "Price: low → high", sortPriceHigh: "Price: high → low",
     nearMe: "Near me", nearLocating: "Finding you…", nearOn: "Sorted by nearest",
     nearFail: "Couldn't get your location — allow location access and try again.", kmAway: "km away",
     fabCheckin: "Check in",
@@ -114,7 +114,7 @@ const I18N = {
     anyAge: "أي عمر",
     maxPrice: "أعلى سعر شهري",
     sort: "ترتيب حسب",
-    sortRating: "الأعلى تقييماً", sortPriceLow: "السعر: من الأقل", sortPriceHigh: "السعر: من الأعلى",
+    sortRating: "مقترح", sortPriceLow: "السعر: من الأقل", sortPriceHigh: "السعر: من الأعلى",
     nearMe: "الأقرب إليّ", nearLocating: "نحدّد موقعك…", nearOn: "مرتّبة حسب الأقرب",
     nearFail: "تعذّر تحديد موقعك — اسمح بالوصول للموقع وحاول مجدداً.", kmAway: "كم",
     fabCheckin: "تسجيل حضور",
@@ -436,14 +436,6 @@ Object.assign(I18N.ar, AUTH_I18N.ar);
 GYMS.forEach(g => { g.open247 = (g.id === "g3" || g.id === "g7"); });
 
 /* ---- Shared sample reviews (shown 3 per gym) ---- */
-const REVIEWS = [
-  { author: "Sara",     rating: 5, days: 4,  text: { en: "Clean, spacious and the trainers really know their stuff.", ar: "نظيف وواسع والمدربون محترفون فعلاً." } },
-  { author: "Mohammad", rating: 4, days: 9,  text: { en: "Great equipment. Gets a bit crowded after 6pm.", ar: "أجهزة ممتازة، لكن يزدحم قليلاً بعد السادسة مساءً." } },
-  { author: "Lana",     rating: 5, days: 15, text: { en: "Loved the women's hours and the pool is spotless.", ar: "أحببت ساعات النساء والمسبح نظيف جداً." } },
-  { author: "Yazan",    rating: 4, days: 23, text: { en: "Good value for the price and friendly staff.", ar: "قيمة ممتازة مقابل السعر وطاقم ودود." } },
-  { author: "Rana",     rating: 5, days: 31, text: { en: "Booked a personal trainer and saw results in weeks.", ar: "حجزت مدرباً شخصياً ولاحظت نتائج خلال أسابيع." } },
-  { author: "Fadi",     rating: 3, days: 40, text: { en: "Nice place, but parking can be tricky at peak times.", ar: "مكان جميل لكن الموقف صعب في أوقات الذروة." } },
-];
 
 /* ---- Shared sample weekly class schedule (shown if gym has classes) ---- */
 const CLASS_SCHEDULE = [
@@ -459,8 +451,8 @@ const CLASS_SCHEDULE = [
 const FEAT_I18N = {
   en: {
     open247: "Open 24/7", h247: "24/7", filter247: "Open 24/7 only", hours247short: "24 hours",
-    busyNow: "Right now", occQuiet: "Quiet", occModerate: "Moderate", occBusy: "Busy", howBusy: "How busy is it now",
-    reviewsTitle: "Reviews", classScheduleTitle: "Class schedule",
+    busyNow: "Usually at this hour (estimate)", occQuiet: "Quiet", occModerate: "Moderate", occBusy: "Busy", howBusy: "How busy it usually is (estimate)",
+    reviewsTitle: "Reviews", estShort: "est.", noReviewsYet: "No verified member reviews yet. Reviews will appear here once members who visited leave them.", classScheduleTitle: "Class schedule",
     compare: "Compare", compareTitle: "Compare gyms", addCompare: "Compare", inCompare: "Added",
     clearCompare: "Clear", compareFull: "You can compare up to 3 gyms at a time",
     cmpRating: "Rating", cmpPrice: "Monthly price", cmpAccess: "Access", cmpPool: "Pool",
@@ -471,8 +463,8 @@ const FEAT_I18N = {
   },
   ar: {
     open247: "مفتوح 24/7", h247: "24/7", filter247: "المفتوحة 24/7 فقط", hours247short: "24 ساعة",
-    busyNow: "الآن", occQuiet: "هادئ", occModerate: "متوسط", occBusy: "مزدحم", howBusy: "مدى الازدحام الآن",
-    reviewsTitle: "التقييمات", classScheduleTitle: "جدول الحصص",
+    busyNow: "عادةً في هذه الساعة (تقدير)", occQuiet: "هادئ", occModerate: "متوسط", occBusy: "مزدحم", howBusy: "مدى الازدحام المعتاد (تقدير)",
+    reviewsTitle: "التقييمات", estShort: "تقدير", noReviewsYet: "لا توجد تقييمات موثّقة من الأعضاء بعد. ستظهر هنا عندما يقيّم الأعضاء الذين زاروا النادي.", classScheduleTitle: "جدول الحصص",
     compare: "قارن", compareTitle: "مقارنة الأندية", addCompare: "قارن", inCompare: "مضاف",
     clearCompare: "مسح", compareFull: "يمكنك مقارنة 3 أندية كحد أقصى",
     cmpRating: "التقييم", cmpPrice: "السعر الشهري", cmpAccess: "الدخول", cmpPool: "المسبح",
